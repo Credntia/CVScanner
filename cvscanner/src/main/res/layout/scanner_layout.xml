@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <SurfaceView
+        android:id="@+id/cam_surface_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        />
+
+    <devliving.online.cvscanner.CVCanvas
+        android:id="@+id/cv_canvas"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+
+    <ImageButton
+        android:id="@+id/flash_toggle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@android:color/transparent"
+        android:scaleType="fitXY"
+        android:src="@drawable/ic_flash"
+        android:layout_gravity="top|right"
+        android:layout_margin="32dp"/>
+
+
+    <ImageButton
+        android:id="@+id/shutter"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:background="@drawable/circular_bg_selector"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_action_shutter"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_margin="32dp"/>
+
+</FrameLayout>

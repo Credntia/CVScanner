@@ -1,10 +1,12 @@
 package devliving.online.cvscanner;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.util.Log;
 import android.view.Display;
+import android.view.Surface;
 import android.view.SurfaceHolder;
 
 import java.io.IOException;
@@ -18,7 +20,8 @@ public class CVCamera {
 
     private Camera mCamera; //TODO: remove deprecated code
 
-    int previewHeight;
+    int previewHeight, cameraId;
+
     boolean isAutofocusAvailable, isFlashAvailable;
     boolean isFlashOn = false, isFocused = false;
     boolean isTakingPicture = true;
@@ -28,8 +31,8 @@ public class CVCamera {
     public static CVCamera open(Activity context){
         CVCamera camera = new CVCamera();
 
-        int cameraId = findBestCamera();
-        camera.mCamera = Camera.open(cameraId);
+        camera.cameraId = findBestCamera();
+        camera.mCamera = Camera.open(camera.cameraId);
 
         Camera.Parameters param;
         param = camera.mCamera.getParameters();
@@ -79,7 +82,8 @@ public class CVCamera {
         }
 
         camera.mCamera.setParameters(param);
-        camera.mCamera.setDisplayOrientation(90);
+
+        camera.updateCameraDisplayOrientation(context);
         /*mBugRotate = mSharedPref.getBoolean("bug_rotate", false);
 
         if (mBugRotate) {
@@ -96,6 +100,40 @@ public class CVCamera {
         camera.isTakingPicture = false;
         camera.isFocused = true;
         return camera;
+    }
+
+    public void updateCameraDisplayOrientation(Activity context){
+        Camera.Parameters parameters = mCamera.getParameters();
+
+        Camera.CameraInfo camInfo = new android.hardware.Camera.CameraInfo();
+        Camera.getCameraInfo(cameraId, camInfo);
+
+        Display display = context.getWindowManager().getDefaultDisplay();
+        int rotation = display.getRotation();
+        int degrees = 0;
+        switch (rotation) {
+            case Surface.ROTATION_0:
+                degrees = 0;
+                break;
+            case Surface.ROTATION_90:
+                degrees = 90;
+                break;
+            case Surface.ROTATION_180:
+                degrees = 180;
+                break;
+            case Surface.ROTATION_270:
+                degrees = 270;
+                break;
+        }
+
+        int result;
+        if (camInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+            result = (camInfo.orientation + degrees) % 360;
+            result = (360 - result) % 360;  // compensate the mirror
+        } else {  // back-facing
+            result = (camInfo.orientation - degrees + 360) % 360;
+        }
+        mCamera.setDisplayOrientation(result);
     }
 
     public void stopPreview(){

@@ -2,6 +2,7 @@ package devliving.online.cvscanner;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.graphics.ImageFormat;
 import android.graphics.Paint;
 import android.graphics.Path;
@@ -151,6 +152,14 @@ public class CVScannerActivity extends AppCompatActivity implements SurfaceHolde
 
         //TODO disable preview
         disableCamera();
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        if(mCamera != null){
+            mCamera.updateCameraDisplayOrientation(this);
+        }
     }
 
     @Override

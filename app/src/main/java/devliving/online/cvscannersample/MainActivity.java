@@ -39,10 +39,7 @@ public class MainActivity extends AppCompatActivity {
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                /*Intent i = new Intent(MainActivity.this, CVScannerActivity.class);
-                startActivity(i);*/
-
-                Intent i = new Intent(MainActivity.this, StepByStepTestActivity.class);
+                Intent i = new Intent(MainActivity.this, CVScannerActivity.class);
                 startActivity(i);
             }
         });
@@ -65,7 +62,9 @@ public class MainActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
+        if (id == R.id.action_step_by_step) {
+            Intent i = new Intent(MainActivity.this, StepByStepTestActivity.class);
+            startActivity(i);
             return true;
         }
 

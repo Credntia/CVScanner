@@ -34,6 +34,10 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.WindowManager;
 
+import com.google.android.gms.common.images.Size;
+import com.google.android.gms.vision.Detector;
+import com.google.android.gms.vision.Frame;
+
 import java.io.IOException;
 import java.lang.Thread.State;
 import java.lang.annotation.Retention;
@@ -1174,8 +1178,13 @@ public class CameraSource {
                         return;
                     }
 
-                    outputFrame = new Frame(mPendingFrameData, mPreviewSize, mPendingFrameId, mPendingTimeMillis, mRotation);
-
+                    outputFrame = new Frame.Builder()
+                            .setImageData(mPendingFrameData, mPreviewSize.getWidth(),
+                                    mPreviewSize.getHeight(), ImageFormat.NV21)
+                            .setId(mPendingFrameId)
+                            .setTimestampMillis(mPendingTimeMillis)
+                            .setRotation(mRotation)
+                            .build();
                     // Hold onto the frame data locally, so that we can use this for detection
                     // below.  We need to clear mPendingFrameData to ensure that this buffer isn't
                     // recycled back to the camera before we are done using that data.
@@ -1188,7 +1197,7 @@ public class CameraSource {
                 // frame.
 
                 try {
-                    mDetector.processFrame(outputFrame);
+                    mDetector.receiveFrame(outputFrame);
                 } catch (Throwable t) {
                     Log.e(TAG, "Exception thrown from receiver.", t);
                 } finally {

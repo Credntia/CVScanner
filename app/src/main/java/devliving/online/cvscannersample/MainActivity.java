@@ -25,8 +25,11 @@ import java.io.IOException;
 
 import devliving.online.cvscanner.CVProcessor;
 import devliving.online.cvscanner.CVScannerActivity;
+import devliving.online.cvscanner.DocumentScannerActivity;
 
 public class MainActivity extends AppCompatActivity {
+
+    final int REQ_SCAN = 11;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,8 +42,8 @@ public class MainActivity extends AppCompatActivity {
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent i = new Intent(MainActivity.this, CVScannerActivity.class);
-                startActivity(i);
+                Intent i = new Intent(MainActivity.this, DocumentScannerActivity.class);
+                startActivityForResult(i, REQ_SCAN);
             }
         });
     }

@@ -2,6 +2,9 @@ package devliving.online.cvscanner;
 
 import android.util.Log;
 
+import com.google.android.gms.vision.Frame;
+
+import org.opencv.android.Utils;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
@@ -26,6 +29,34 @@ import java.util.List;
 public class CVProcessor {
     final static String TAG = "CV-PROCESSOR";
     final static int FIXED_HEIGHT = 800;
+
+    public static Document detectDocument(Frame frame){
+        Size imageSize = new Size(frame.getMetadata().getWidth(), frame.getMetadata().getHeight());
+        Mat src = new Mat(imageSize, CvType.CV_8UC4);
+        Utils.bitmapToMat(frame.getBitmap(), src);
+
+        List<MatOfPoint> contours = CVProcessor.findContours(src);
+        if(!contours.isEmpty()){
+            Quadrilateral quad = getQuadrilateral(contours, imageSize);
+
+            if(quad != null){
+                Point[] rescaledPoints = new Point[4];
+
+                double ratio = getScaleRatio(imageSize);
+
+                for ( int i=0; i<4 ; i++ ) {
+                    int x = Double.valueOf(quad.points[i].x*ratio).intValue();
+                    int y = Double.valueOf(quad.points[i].y*ratio).intValue();
+                    rescaledPoints[i] = new Point(x, y);
+                }
+
+                quad.points = rescaledPoints;
+                return new Document(frame, quad);
+            }
+        }
+
+        return null;
+    }
 
     public static Rect detectBorder(Mat original){
         Mat src = original.clone();

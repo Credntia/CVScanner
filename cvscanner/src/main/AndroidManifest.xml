@@ -16,6 +16,11 @@
             android:theme="@style/CVScannerTheme"
             android:configChanges="orientation|screenSize"
             />
+
+        <activity android:name=".DocumentScannerActivity"
+            android:theme="@style/CVScannerTheme"
+            android:configChanges="orientation|screenSize"
+            />
     </application>
 
 </manifest>

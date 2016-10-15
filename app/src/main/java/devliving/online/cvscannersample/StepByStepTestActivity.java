@@ -1,23 +1,25 @@
 package devliving.online.cvscannersample;
 
+import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Message;
+import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.RecyclerView.ViewHolder;
+import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.ListView;
-import android.widget.ScrollView;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
@@ -26,6 +28,8 @@ import org.opencv.android.Utils;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfPoint;
+import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
 import org.opencv.core.Range;
 import org.opencv.core.Rect;
@@ -33,39 +37,69 @@ import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+
+import devliving.online.cvscanner.CVProcessor;
 
 /**
  * Created by user on 9/22/16.
  */
 public class StepByStepTestActivity extends AppCompatActivity{
 
+    final int REQ_PICK_IMAGE = 1;
+
     RecyclerView contentView;
     ImageAdapter mAdapter;
+    FloatingActionButton fab;
+
+    Mat mData = null;
 
     BaseLoaderCallback mCallback = new BaseLoaderCallback(this) {
         @Override
         public void onManagerConnected(int status) {
             super.onManagerConnected(status);
 
-            startTests();
+            fab.setScaleX(0.1f);
+            fab.setScaleY(0.1f);
+            fab.setAlpha(0.4f);
+            fab.setVisibility(View.VISIBLE);
+
+            fab.animate()
+                    .alpha(1)
+                    .scaleX(1)
+                    .scaleY(1)
+                    .start();
         }
     };
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_step_by_step);
 
-        contentView = new RecyclerView(this);
-        contentView.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
 
-        setContentView(contentView);
+        fab = (FloatingActionButton) findViewById(R.id.fab);
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.setType("image/*");
+                startActivityForResult(intent, REQ_PICK_IMAGE);
+            }
+        });
+
+        contentView = (RecyclerView) findViewById(R.id.image_list);
 
         contentView.setLayoutManager(new LinearLayoutManager(this));
-        contentView.setHasFixedSize(true);
+        //contentView.setHasFixedSize(true);
 
         mAdapter = new ImageAdapter();
         contentView.setAdapter(mAdapter);
@@ -86,6 +120,32 @@ public class StepByStepTestActivity extends AppCompatActivity{
         super.onDestroy();
 
         mAdapter.clear();
+        if(mData != null){
+            mData.release();
+            mData = null;
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if(requestCode == REQ_PICK_IMAGE && resultCode == RESULT_OK && data != null){
+            try {
+                Bitmap image = BitmapFactory.decodeStream(getContentResolver().openInputStream(data.getData()));
+                if(mData != null){
+                    mData.release();
+                    mData = null;
+                }
+                mData = new Mat();
+                Utils.bitmapToMat(image, mData);
+                image.recycle();
+
+                startTests();
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     HandlerThread imgThread;
@@ -101,13 +161,10 @@ public class StepByStepTestActivity extends AppCompatActivity{
             testRunner = new CVTestRunner(imgThread.getLooper());
         }
 
-        try {
+        if(mData != null){
             Message msg = new Message();
-            Mat src = Utils.loadResource(this, R.drawable.tough_sample_1);
-            msg.obj = new CVTestMessage(CVCommand.START_BORDER_DETECTION, src);
+            msg.obj = new CVTestMessage(CVCommand.START_DOCUMENT_SCAN_1, mData);
             testRunner.sendMessage(msg);
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 
@@ -200,6 +257,7 @@ public class StepByStepTestActivity extends AppCompatActivity{
             int pos = imagePaths.size();
             imagePaths.add(path);
             notifyItemInserted(pos);
+            Log.d("ADAPTER", "added image");
         }
 
         public void clear(){
@@ -212,6 +270,8 @@ public class StepByStepTestActivity extends AppCompatActivity{
                     Utility.deleteFilePermanently(path);
                 }
             }
+
+            Log.d("ADAPTER", "cleared all images");
         }
     }
 
@@ -226,7 +286,9 @@ public class StepByStepTestActivity extends AppCompatActivity{
     }
 
     enum CVCommand {
-        START_BORDER_DETECTION;
+        START_BORDER_DETECTION,
+        START_DOCUMENT_SCAN_1,
+        START_DOCUMENT_SCAN_2;
     }
 
     class CVTestMessage {
@@ -339,6 +401,95 @@ public class StepByStepTestActivity extends AppCompatActivity{
                         onNextStep(data.input);
                         data.input.release();
                         Log.d(TAG, "*** --> Processing done.");
+                        break;
+
+                    case START_DOCUMENT_SCAN_1:
+                        Mat img = data.input.clone();
+                        data.input.release();
+                        //find contours
+                        final int FIXED_HEIGHT = 800;
+                        double ratio = img.size().height/FIXED_HEIGHT;
+                        int width = (int) (img.size().width / ratio);
+                        int height = (int) (img.size().height / ratio);
+                        Size newSize = new Size(width, height);
+                        Mat resizedImg = new Mat(newSize, CvType.CV_8UC4);
+                        Imgproc.resize(img, resizedImg, newSize);
+                        onNextStep(resizedImg);
+
+                        Imgproc.medianBlur(resizedImg, resizedImg, 5);
+                        onNextStep(resizedImg);
+
+                        Mat cannedImg = new Mat(newSize, CvType.CV_8UC1);
+                        Imgproc.Canny(resizedImg, cannedImg, 70, 200, 3, true);
+                        resizedImg.release();
+                        onNextStep(cannedImg);
+
+                        Imgproc.threshold(cannedImg, cannedImg, 70, 255, Imgproc.THRESH_OTSU);
+                        onNextStep(cannedImg);
+
+                        Mat dilatedImg = new Mat(newSize, CvType.CV_8UC1);
+                        Mat morph = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(3, 3));
+                        Imgproc.dilate(cannedImg, dilatedImg, morph, new Point(-1, -1), 2, 1, new Scalar(1));
+                        cannedImg.release();
+                        morph.release();
+                        onNextStep(dilatedImg);
+
+                        ArrayList<MatOfPoint> contours = new ArrayList<>();
+                        Mat hierarchy = new Mat();
+                        Imgproc.findContours(dilatedImg, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+                        hierarchy.release();
+
+                        Log.d(TAG, "contours found: " + contours.size());
+
+                        Collections.sort(contours, new Comparator<MatOfPoint>() {
+                            @Override
+                            public int compare(MatOfPoint o1, MatOfPoint o2) {
+                                return Double.valueOf(Imgproc.contourArea(o2)).compareTo(Imgproc.contourArea(o1));
+                            }
+                        });
+
+                        Imgproc.drawContours(dilatedImg, contours, 0, new Scalar(255, 255, 250));
+                        onNextStep(dilatedImg);
+                        dilatedImg.release();
+
+                        MatOfPoint rectContour = null;
+                        Point[] foundPoints = null;
+
+                        for(MatOfPoint contour:contours){
+                            MatOfPoint2f mat = new MatOfPoint2f(contour.toArray());
+                            double peri = Imgproc.arcLength(mat, true);
+                            MatOfPoint2f approx = new MatOfPoint2f();
+                            Imgproc.approxPolyDP(mat, approx, 0.02 * peri, true);
+
+                            Point[] points = approx.toArray();
+                            Log.d("SCANNER", "approx size " + points.length);
+
+                            if (points.length == 4) {
+                                Point[] spoints = CVProcessor.sortPoints(points);
+
+                                if (CVProcessor.insideArea(spoints, newSize)) {
+                                    rectContour = contour;
+                                    foundPoints = spoints;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if(rectContour != null){
+                            Point[] scaledPoints = new Point[foundPoints.length];
+
+                            for(int i = 0; i < foundPoints.length; i++){
+                                scaledPoints[i] = new Point(foundPoints[i].x * ratio, foundPoints[i].y * ratio);
+                            }
+                            Log.d("SCANNER", "drawing lines");
+                            Imgproc.line(img, scaledPoints[0], scaledPoints[1], new Scalar(200, 200, 140));
+                            Imgproc.line(img, scaledPoints[0], scaledPoints[3], new Scalar(200, 200, 140));
+                            Imgproc.line(img, scaledPoints[1], scaledPoints[2], new Scalar(200, 200, 140));
+                            Imgproc.line(img, scaledPoints[3], scaledPoints[2], new Scalar(200, 200, 140));
+                        }
+
+                        onNextStep(img);
+                        img.release();
                         break;
                 }
             }

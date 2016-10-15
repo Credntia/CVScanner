@@ -3,19 +3,25 @@ package devliving.online.cvscanner;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.graphics.Color;
 import android.graphics.ImageFormat;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.drawable.shapes.PathShape;
 import android.hardware.Camera;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Looper;
+import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.graphics.drawable.DrawableCompat;
-import android.support.v4.view.ViewCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
@@ -24,17 +30,18 @@ import android.widget.ImageButton;
 import android.widget.Toast;
 
 import org.opencv.android.BaseLoaderCallback;
-import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfPoint;
+import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
 import java.io.IOException;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.List;
 
 /**
  * Created by Mehedi on 9/19/16.
@@ -44,7 +51,7 @@ public class CVScannerActivity extends AppCompatActivity implements SurfaceHolde
     final int CAMERA_REQ_CODE = 1;
     final int STORAGE_REQ_CODE = 2;
 
-    ImageButton flashButton, shutterButton;
+    ImageButton flashButton;
     SurfaceView mSurfaceView;
     CVCanvas mShapeCanvas;
 
@@ -52,6 +59,11 @@ public class CVScannerActivity extends AppCompatActivity implements SurfaceHolde
     CVCamera mCamera;
 
     boolean isProcessing = false;
+
+    GestureDetector tapDetector;
+
+    HandlerThread processorThread;
+    ImageProcessor mProcessor;
 
     BaseLoaderCallback mCallback = new BaseLoaderCallback(this) {
         @Override
@@ -87,11 +99,27 @@ public class CVScannerActivity extends AppCompatActivity implements SurfaceHolde
         setContentView(R.layout.scanner_layout);
         mSurfaceView= (SurfaceView) findViewById(R.id.cam_surface_view);
         mShapeCanvas = (CVCanvas) findViewById(R.id.cv_canvas);
-        shutterButton = (ImageButton) findViewById(R.id.shutter);
         flashButton = (ImageButton) findViewById(R.id.flash_toggle);
 
         mSurfaceHolder = mSurfaceView.getHolder();
         mSurfaceHolder.addCallback(this);
+
+        tapDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener(){
+            @Override
+            public boolean onDoubleTap(MotionEvent e) {
+                if(mCamera != null && mCamera.isFocused){
+                    takePicture();
+                }
+
+                return super.onDoubleTap(e);
+            }
+
+            @Override
+            public boolean onSingleTapConfirmed(MotionEvent e) {
+                Toast.makeText(CVScannerActivity.this, "Double tap to force detection", Toast.LENGTH_SHORT).show();
+                return super.onSingleTapConfirmed(e);
+            }
+        });
     }
 
 
@@ -188,6 +216,17 @@ public class CVScannerActivity extends AppCompatActivity implements SurfaceHolde
         mCamera = CVCamera.open(this);
 
         mSurfaceView.getLayoutParams().height = mCamera.previewHeight;
+
+        mShapeCanvas.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                return tapDetector.onTouchEvent(event);
+            }
+        });
+
+        processorThread = new HandlerThread("Image Processor");
+        processorThread.start();
+        mProcessor = new ImageProcessor(processorThread.getLooper());
     }
 
     /**
@@ -271,69 +310,22 @@ public class CVScannerActivity extends AppCompatActivity implements SurfaceHolde
 
             yuv.release();
 
-            processPreviewFrame(rgba, picSize);
+            processPreviewFrame(rgba);
+            isProcessing = false;
         }
     }
 
-    void processPreviewFrame(final Mat src, final Camera.Size picSize){
-        Thread thread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Rect rect = CVProcessor.detectBorder(src);
-
-                Log.d("CV-SCANNER", "detected rect: " + rect.toString());
-                Path path = new Path();
-                path.moveTo(rect.x, rect.y);
-                path.lineTo(rect.x + rect.width, rect.y);
-                path.lineTo(rect.x + rect.width, rect.y + rect.height);
-                path.lineTo(rect.x, rect.y + rect.height);
-                path.close();
-
-                final PathShape shape = new PathShape(path, picSize.width, picSize.height);
-                final Paint body = new Paint();
-                body.setColor(getResources().getColor(R.color.box_body));
-                final Paint border = new Paint();
-                border.setColor(getResources().getColor(R.color.box_border));
-                border.setStrokeWidth(5);
-
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        mShapeCanvas.clear();
-                        mShapeCanvas.addShape(shape, body, border);
-                        mShapeCanvas.invalidate();
-                        isProcessing = false;
-                        Log.d("CV-SCANNER", "done processing preview frame");
-                    }
-                });
-            }
-        });
-
-        thread.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
-            @Override
-            public void uncaughtException(Thread t, Throwable e) {
-                Log.e("CV-SCANNER", "Thread interrupted: " + e.getLocalizedMessage());
-                e.printStackTrace();
-                if(t.getStackTrace() != null){
-                    Log.e("CV-SCANNER", "thread stack trace:\n" + t.getStackTrace());
-                }
-            }
-        });
-
-        thread.setPriority(Thread.NORM_PRIORITY);
-        thread.start();
+    void processPreviewFrame(final Mat src){
+        ImgMsg msg = new ImgMsg(MsgType.PROCESS_PREVIEW, src);
+        Message message = new Message();
+        message.obj = msg;
+        mProcessor.handleMessage(message);
     }
 
     void onFlashClick(){
         if(mCamera.toggleFlash()){
             DrawableCompat.setTint(flashButton.getDrawable(),
                     getResources().getColor(mCamera.isFlashOn? R.color.torch_yellow:R.color.dark_gray));
-        }
-    }
-
-    void onShutterClick(){
-        if(!mCamera.takePicture(null, null, this)){
-            Toast.makeText(this, R.string.camera_busy, Toast.LENGTH_LONG).show();
         }
     }
 
@@ -348,5 +340,93 @@ public class CVScannerActivity extends AppCompatActivity implements SurfaceHolde
     @Override
     public void onPictureTaken(byte[] data, Camera camera) {
 
+    }
+
+    void drawFrame(Point[] points, Size size){
+        Path path = new Path();
+
+        // ATTENTION: axis are swapped
+
+        float previewWidth = (float) size.height;
+        float previewHeight = (float) size.width;
+
+        path.moveTo( previewWidth - (float) points[0].y, (float) points[0].x );
+        path.lineTo( previewWidth - (float) points[1].y, (float) points[1].x );
+        path.lineTo( previewWidth - (float) points[2].y, (float) points[2].x );
+        path.lineTo( previewWidth - (float) points[3].y, (float) points[3].x );
+        path.close();
+
+        PathShape newBox = new PathShape(path , previewWidth , previewHeight);
+
+        Paint paint = new Paint();
+        paint.setColor(Color.argb(64, 0, 255, 0));
+
+        Paint border = new Paint();
+        border.setColor(Color.rgb(0, 255, 0));
+        border.setStrokeWidth(5);
+
+        mShapeCanvas.clear();
+        mShapeCanvas.addShape(newBox, paint, border);
+        mShapeCanvas.invalidate();
+    }
+
+    void takePicture(){
+
+    }
+
+    enum MsgType{
+        PROCESS_PREVIEW,
+        PROCESS_PHOTO
+    }
+
+    class ImgMsg{
+        MsgType type;
+        Mat src;
+
+        public ImgMsg(MsgType type, Mat src) {
+            this.type = type;
+            this.src = src;
+        }
+    }
+
+    class ImageProcessor extends Handler{
+
+        ImageProcessor(Looper looper){
+            super(looper);
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            if(msg.obj != null && msg.obj instanceof ImgMsg){
+                ImgMsg message = (ImgMsg) msg.obj;
+                switch (message.type){
+                    case PROCESS_PREVIEW:
+                        Size size = message.src.size();
+                        List<MatOfPoint> contours = CVProcessor.findContours(message.src);
+                        if(!contours.isEmpty()){
+                            CVProcessor.Quadrilateral quad = CVProcessor.getQuadrilateral(contours, size);
+
+                            if(quad != null){
+                                Point[] rescaledPoints = new Point[4];
+
+                                double ratio = CVProcessor.getScaleRatio(size);
+
+                                for ( int i=0; i<4 ; i++ ) {
+                                    int x = Double.valueOf(quad.points[i].x*ratio).intValue();
+                                    int y = Double.valueOf(quad.points[i].y*ratio).intValue();
+                                    rescaledPoints[i] = new Point(x, y);
+                                }
+
+                                drawFrame(rescaledPoints, size);
+                                takePicture();
+                            }
+                        }
+                        break;
+
+                    case PROCESS_PHOTO:
+                        break;
+                }
+            }
+        }
     }
 }

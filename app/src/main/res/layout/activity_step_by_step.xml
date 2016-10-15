@@ -5,9 +5,10 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
-    tools:context="devliving.online.cvscannersample.MainActivity">
+    tools:context="devliving.online.cvscannersample.StepByStepTestActivity">
 
     <android.support.design.widget.AppBarLayout
+        android:id="@+id/barLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:theme="@style/AppTheme.AppBarOverlay">
@@ -21,7 +22,13 @@
 
     </android.support.design.widget.AppBarLayout>
 
-    <include layout="@layout/content_main" />
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/image_list"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="?attr/actionBarSize">
+
+    </android.support.v7.widget.RecyclerView>
 
     <android.support.design.widget.FloatingActionButton
         android:id="@+id/fab"
@@ -29,10 +36,10 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_margin="@dimen/fab_margin"
-        android:src="@drawable/ic_action_camera"
-        app:backgroundTint="@color/colorPrimaryDark"
-        app:fabSize="normal"
+        android:src="@drawable/ic_action_pick"
         app:rippleColor="@color/colorPrimary"
-        android:tint="@android:color/white"/>
+        app:fabSize="normal"
+        app:backgroundTint="@color/colorPrimaryDark"
+        android:visibility="invisible"/>
 
 </android.support.design.widget.CoordinatorLayout>

@@ -26,15 +26,4 @@
         android:layout_gravity="top|right"
         android:layout_margin="32dp"/>
 
-
-    <ImageButton
-        android:id="@+id/shutter"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:background="@drawable/circular_bg_selector"
-        android:scaleType="fitCenter"
-        android:src="@drawable/ic_action_shutter"
-        android:layout_gravity="bottom|center_horizontal"
-        android:layout_margin="32dp"/>
-
 </FrameLayout>

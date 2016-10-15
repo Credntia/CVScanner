@@ -5,16 +5,27 @@ import android.util.Log;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfPoint;
+import org.opencv.core.MatOfPoint2f;
+import org.opencv.core.Point;
 import org.opencv.core.Range;
 import org.opencv.core.Rect;
+import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 
 /**
  * Created by Mehedi on 9/20/16.
  */
 public class CVProcessor {
     final static String TAG = "CV-PROCESSOR";
+    final static int FIXED_HEIGHT = 800;
 
     public static Rect detectBorder(Mat original){
         Mat src = original.clone();
@@ -93,5 +104,145 @@ public class CVProcessor {
         src.release();
 
         return result;
+    }
+
+    static double getScaleRatio(Size srcSize){
+        return srcSize.height/FIXED_HEIGHT;
+    }
+
+    public static List<MatOfPoint> findContours(Mat src){
+        Mat img = src.clone();
+        src.release();
+        //find contours
+        double ratio = getScaleRatio(img.size());
+        int width = (int) (img.size().width / ratio);
+        int height = (int) (img.size().height / ratio);
+        Size newSize = new Size(width, height);
+        Mat resizedImg = new Mat(newSize, CvType.CV_8UC4);
+        Imgproc.resize(img, resizedImg, newSize);
+
+        Imgproc.medianBlur(resizedImg, resizedImg, 5);
+
+        Mat cannedImg = new Mat(newSize, CvType.CV_8UC1);
+        Imgproc.Canny(resizedImg, cannedImg, 70, 200, 3, true);
+        resizedImg.release();
+
+        Imgproc.threshold(cannedImg, cannedImg, 70, 255, Imgproc.THRESH_OTSU);
+
+        Mat dilatedImg = new Mat(newSize, CvType.CV_8UC1);
+        Mat morph = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(3, 3));
+        Imgproc.dilate(cannedImg, dilatedImg, morph, new Point(-1, -1), 2, 1, new Scalar(1));
+        cannedImg.release();
+        morph.release();
+
+        ArrayList<MatOfPoint> contours = new ArrayList<>();
+        Mat hierarchy = new Mat();
+        Imgproc.findContours(dilatedImg, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+        hierarchy.release();
+
+        Log.d(TAG, "contours found: " + contours.size());
+
+        Collections.sort(contours, new Comparator<MatOfPoint>() {
+            @Override
+            public int compare(MatOfPoint o1, MatOfPoint o2) {
+                return Double.valueOf(Imgproc.contourArea(o2)).compareTo(Imgproc.contourArea(o1));
+            }
+        });
+
+        return contours;
+    }
+
+    static public Quadrilateral getQuadrilateral(List<MatOfPoint> contours, Size srcSize){
+        double ratio = getScaleRatio(srcSize);
+        int height = Double.valueOf(srcSize.height / ratio).intValue();
+        int width = Double.valueOf(srcSize.width / ratio).intValue();
+        Size size = new Size(width,height);
+
+        for ( MatOfPoint c: contours ) {
+            MatOfPoint2f c2f = new MatOfPoint2f(c.toArray());
+            double peri = Imgproc.arcLength(c2f, true);
+            MatOfPoint2f approx = new MatOfPoint2f();
+            Imgproc.approxPolyDP(c2f, approx, 0.02 * peri, true);
+
+            Point[] points = approx.toArray();
+            Log.d("SCANNER", "approx size: " + points.length);
+
+            // select biggest 4 angles polygon
+            if (points.length == 4) {
+                Point[] foundPoints = sortPoints(points);
+
+                if (insideArea(foundPoints, size)) {
+                    return new Quadrilateral( c , foundPoints );
+                }
+            }
+        }
+
+        return null;
+    }
+
+    public static Point[] sortPoints( Point[] src ) {
+
+        ArrayList<Point> srcPoints = new ArrayList<>(Arrays.asList(src));
+
+        Point[] result = { null , null , null , null };
+
+        Comparator<Point> sumComparator = new Comparator<Point>() {
+            @Override
+            public int compare(Point lhs, Point rhs) {
+                return Double.valueOf(lhs.y + lhs.x).compareTo(rhs.y + rhs.x);
+            }
+        };
+
+        Comparator<Point> diffComparator = new Comparator<Point>() {
+
+            @Override
+            public int compare(Point lhs, Point rhs) {
+                return Double.valueOf(lhs.y - lhs.x).compareTo(rhs.y - rhs.x);
+            }
+        };
+
+        // top-left corner = minimal sum
+        result[0] = Collections.min(srcPoints, sumComparator);
+
+        // bottom-right corner = maximal sum
+        result[2] = Collections.max(srcPoints, sumComparator);
+
+        // top-right corner = minimal diference
+        result[1] = Collections.min(srcPoints, diffComparator);
+
+        // bottom-left corner = maximal diference
+        result[3] = Collections.max(srcPoints, diffComparator);
+
+        return result;
+    }
+
+    public static boolean insideArea(Point[] rp, Size size) {
+
+        int width = Double.valueOf(size.width).intValue();
+        int height = Double.valueOf(size.height).intValue();
+        int baseMeasure = height/4;
+
+        int bottomPos = height-baseMeasure;
+        int topPos = baseMeasure;
+        int leftPos = width/2-baseMeasure;
+        int rightPos = width/2+baseMeasure;
+
+        return (
+                rp[0].x <= leftPos && rp[0].y <= topPos
+                        && rp[1].x >= rightPos && rp[1].y <= topPos
+                        && rp[2].x >= rightPos && rp[2].y >= bottomPos
+                        && rp[3].x <= leftPos && rp[3].y >= bottomPos
+
+        );
+    }
+
+    public static class Quadrilateral {
+        public MatOfPoint contour;
+        public Point[] points;
+
+        public Quadrilateral(MatOfPoint contour, Point[] points) {
+            this.contour = contour;
+            this.points = points;
+        }
     }
 }

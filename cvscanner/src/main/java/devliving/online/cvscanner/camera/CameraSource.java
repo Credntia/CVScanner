@@ -19,12 +19,21 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
+import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
+import android.graphics.YuvImage;
 import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
 import android.os.Build;
 import android.os.SystemClock;
+import android.renderscript.Allocation;
+import android.renderscript.Element;
+import android.renderscript.RenderScript;
+import android.renderscript.ScriptIntrinsicYuvToRGB;
+import android.renderscript.Type;
 import android.support.annotation.Nullable;
 import android.support.annotation.RequiresPermission;
 import android.support.annotation.StringDef;
@@ -38,6 +47,13 @@ import com.google.android.gms.common.images.Size;
 import com.google.android.gms.vision.Detector;
 import com.google.android.gms.vision.Frame;
 
+import org.opencv.android.Utils;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.imgproc.Imgproc;
+
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.lang.Thread.State;
 import java.lang.annotation.Retention;
@@ -1178,9 +1194,10 @@ public class CameraSource {
                         return;
                     }
 
+                    Bitmap image = getBitmap(mPendingFrameData.array(), mPreviewSize.getWidth(), mPreviewSize.getHeight());
+
                     outputFrame = new Frame.Builder()
-                            .setImageData(mPendingFrameData, mPreviewSize.getWidth(),
-                                    mPreviewSize.getHeight(), ImageFormat.NV21)
+                            .setBitmap(image)
                             .setId(mPendingFrameId)
                             .setTimestampMillis(mPendingTimeMillis)
                             .setRotation(mRotation)
@@ -1204,6 +1221,35 @@ public class CameraSource {
                     mCamera.addCallbackBuffer(data.array());
                 }
             }
+        }
+
+        Bitmap getBitmap(byte[] yuvData, int width, int height){
+            Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+            Allocation bmData = renderScriptNV21ToRGBA888(
+                    mContext,
+                    width,
+                    height,
+                    yuvData);
+            bmData.copyTo(bitmap);
+
+            return bitmap;
+        }
+
+        Allocation renderScriptNV21ToRGBA888(Context context, int width, int height, byte[] nv21) {
+            RenderScript rs = RenderScript.create(context);
+            ScriptIntrinsicYuvToRGB yuvToRgbIntrinsic = ScriptIntrinsicYuvToRGB.create(rs, Element.U8_4(rs));
+
+            Type.Builder yuvType = new Type.Builder(rs, Element.U8(rs)).setX(nv21.length);
+            Allocation in = Allocation.createTyped(rs, yuvType.create(), Allocation.USAGE_SCRIPT);
+
+            Type.Builder rgbaType = new Type.Builder(rs, Element.RGBA_8888(rs)).setX(width).setY(height);
+            Allocation out = Allocation.createTyped(rs, rgbaType.create(), Allocation.USAGE_SCRIPT);
+
+            in.copyFrom(nv21);
+
+            yuvToRgbIntrinsic.setInput(in);
+            yuvToRgbIntrinsic.forEach(out);
+            return out;
         }
     }
 }

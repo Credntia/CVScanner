@@ -38,7 +38,6 @@ import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -46,6 +45,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import devliving.online.cvscanner.CVProcessor;
+import devliving.online.cvscanner.Document;
 
 /**
  * Created by user on 9/22/16.
@@ -163,7 +163,7 @@ public class StepByStepTestActivity extends AppCompatActivity{
 
         if(mData != null){
             Message msg = new Message();
-            msg.obj = new CVTestMessage(CVCommand.START_DOCUMENT_SCAN_1, mData);
+            msg.obj = new CVTestMessage(CVCommand.START_DOCUMENT_SCAN_2, mData);
             testRunner.sendMessage(msg);
         }
     }
@@ -179,110 +179,6 @@ public class StepByStepTestActivity extends AppCompatActivity{
                 mAdapter.add(path);
             }
         });
-    }
-
-    class ImageAdapter extends RecyclerView.Adapter<ImageViewHolder>{
-        List<String> imagePaths = new ArrayList<>();
-
-        /**
-         * Called when RecyclerView needs a new {@link ViewHolder} of the given type to represent
-         * an item.
-         * <p/>
-         * This new ViewHolder should be constructed with a new View that can represent the items
-         * of the given type. You can either create a new View manually or inflate it from an XML
-         * layout file.
-         * <p/>
-         * The new ViewHolder will be used to display items of the adapter using
-         * {@link #onBindViewHolder(ViewHolder, int, List)}. Since it will be re-used to display
-         * different items in the data set, it is a good idea to cache references to sub views of
-         * the View to avoid unnecessary {@link View#findViewById(int)} calls.
-         *
-         * @param parent   The ViewGroup into which the new View will be added after it is bound to
-         *                 an adapter position.
-         * @param viewType The view type of the new View.
-         * @return A new ViewHolder that holds a View of the given view type.
-         * @see #getItemViewType(int)
-         * @see #onBindViewHolder(ViewHolder, int)
-         */
-        @Override
-        public ImageViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-            ImageView view = new ImageView(parent.getContext());
-            ViewGroup.LayoutParams params = new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            view.setLayoutParams(params);
-            view.setScaleType(ImageView.ScaleType.FIT_XY);
-            view.setBackgroundColor(Color.TRANSPARENT);
-            return new ImageViewHolder(view);
-        }
-
-        /**
-         * Called by RecyclerView to display the data at the specified position. This method should
-         * update the contents of the {@link ViewHolder#itemView} to reflect the item at the given
-         * position.
-         * <p/>
-         * Note that unlike {@link ListView}, RecyclerView will not call this method
-         * again if the position of the item changes in the data set unless the item itself is
-         * invalidated or the new position cannot be determined. For this reason, you should only
-         * use the <code>position</code> parameter while acquiring the related data item inside
-         * this method and should not keep a copy of it. If you need the position of an item later
-         * on (e.g. in a click listener), use {@link ViewHolder#getAdapterPosition()} which will
-         * have the updated adapter position.
-         * <p/>
-         * Override {@link #onBindViewHolder(ViewHolder, int, List)} instead if Adapter can
-         * handle efficient partial bind.
-         *
-         * @param holder   The ViewHolder which should be updated to represent the contents of the
-         *                 item at the given position in the data set.
-         * @param position The position of the item within the adapter's data set.
-         */
-        @Override
-        public void onBindViewHolder(ImageViewHolder holder, int position) {
-            if(position < imagePaths.size()){
-                String path = imagePaths.get(position);
-
-                holder.view.setImageBitmap(Utility.getBitmapFromPath(path, holder.view.getWidth(), 0));
-            }
-        }
-
-        /**
-         * Returns the total number of items in the data set held by the adapter.
-         *
-         * @return The total number of items in this adapter.
-         */
-        @Override
-        public int getItemCount() {
-            return imagePaths.size();
-        }
-
-        public void add(String path){
-            int pos = imagePaths.size();
-            imagePaths.add(path);
-            notifyItemInserted(pos);
-            Log.d("ADAPTER", "added image");
-        }
-
-        public void clear(){
-            if(imagePaths.size() > 0){
-                List<String> paths = new ArrayList(imagePaths);
-                imagePaths.clear();
-                notifyDataSetChanged();
-
-                for(String path:paths){
-                    Utility.deleteFilePermanently(path);
-                }
-            }
-
-            Log.d("ADAPTER", "cleared all images");
-        }
-    }
-
-    class ImageViewHolder extends RecyclerView.ViewHolder{
-        ImageView view;
-        public ImageViewHolder(View itemView) {
-            super(itemView);
-            if(itemView instanceof ImageView) {
-                this.view = (ImageView) itemView;
-            }
-        }
     }
 
     enum CVCommand {
@@ -490,6 +386,26 @@ public class StepByStepTestActivity extends AppCompatActivity{
 
                         onNextStep(img);
                         img.release();
+                        break;
+
+                    case START_DOCUMENT_SCAN_2:
+                        img = data.input.clone();
+                        onNextStep(img);
+
+                        List<MatOfPoint> contourz = CVProcessor.findContours(img);
+
+                        if(!contourz.isEmpty()){
+                            CVProcessor.Quadrilateral quad = CVProcessor.getQuadrilateral(contourz, data.input.size());
+
+                            if(quad != null){
+                                quad.points = CVProcessor.getUpscaledPoints(quad.points, CVProcessor.getScaleRatio(data.input.size()));
+
+                                Mat cropped = CVProcessor.fourPointTransform(data.input, quad.points);
+                                onNextStep(cropped);
+                                data.input.release();
+                                cropped.release();
+                            }
+                        }
                         break;
                 }
             }

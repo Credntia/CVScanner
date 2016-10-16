@@ -5,6 +5,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.drawable.shapes.PathShape;
+import android.util.Log;
 
 import devliving.online.cvscanner.camera.GraphicOverlay;
 
@@ -16,14 +17,12 @@ public class DocumentGraphic extends GraphicOverlay.Graphic {
     Document scannedDoc;
     Paint borderPaint, bodyPaint;
 
-    public DocumentGraphic(GraphicOverlay overlay, int id, Document doc) {
+    public DocumentGraphic(GraphicOverlay overlay, Document doc) {
         super(overlay);
-        Id = id;
         scannedDoc = doc;
 
         borderPaint = new Paint();
         borderPaint.setColor(Color.parseColor("#41fa97"));
-        borderPaint.setAlpha(225);
         borderPaint.setStyle(Paint.Style.STROKE);
         borderPaint.setStrokeCap(Paint.Cap.ROUND);
         borderPaint.setStrokeJoin(Paint.Join.ROUND);
@@ -31,7 +30,7 @@ public class DocumentGraphic extends GraphicOverlay.Graphic {
 
         bodyPaint = new Paint();
         bodyPaint.setColor(Color.parseColor("#69fbad"));
-        bodyPaint.setAlpha(200);
+        bodyPaint.setAlpha(180);
         bodyPaint.setStyle(Paint.Style.FILL);
     }
 
@@ -64,20 +63,41 @@ public class DocumentGraphic extends GraphicOverlay.Graphic {
     public void draw(Canvas canvas) {
         if(scannedDoc != null && scannedDoc.detectedQuad != null){
             Path path = new Path();
-            path.moveTo(translateX((float) scannedDoc.detectedQuad.points[0].x),
-                    translateY((float) scannedDoc.detectedQuad.points[0].y));
-            path.lineTo(translateX((float) scannedDoc.detectedQuad.points[1].x),
-                    translateY((float) scannedDoc.detectedQuad.points[1].y));
-            path.lineTo(translateX((float) scannedDoc.detectedQuad.points[2].x),
-                    translateY((float) scannedDoc.detectedQuad.points[2].y));
-            path.lineTo(translateX((float) scannedDoc.detectedQuad.points[3].x),
-                    translateY((float) scannedDoc.detectedQuad.points[3].y));
+
+            float tlX = translateY((float) scannedDoc.detectedQuad.points[0].y);
+            float tlY = translateX((float) scannedDoc.detectedQuad.points[0].x);
+
+            Log.d("DOC-GRAPHIC", "Top left: x: " + scannedDoc.detectedQuad.points[0].x + ", y: " + scannedDoc.detectedQuad.points[0].y
+            + " -> x: " + tlX + ", y: " + tlY);
+
+            float trX = translateY((float) scannedDoc.detectedQuad.points[1].y);
+            float trY = translateX((float) scannedDoc.detectedQuad.points[1].x);
+
+            Log.d("DOC-GRAPHIC", "Top right: x: " + scannedDoc.detectedQuad.points[1].x + ", y: " + scannedDoc.detectedQuad.points[1].y
+                    + " -> x: " + trX + ", y: " + trY);
+
+            float brX = translateY((float) scannedDoc.detectedQuad.points[2].y);
+            float brY = translateX((float) scannedDoc.detectedQuad.points[2].x);
+
+            Log.d("DOC-GRAPHIC", "Bottom right: x: " + scannedDoc.detectedQuad.points[2].x + ", y: " + scannedDoc.detectedQuad.points[2].y
+                    + " -> x: " + brX + ", y: " + brY);
+
+            float blX = translateY((float) scannedDoc.detectedQuad.points[3].y);
+            float blY = translateX((float) scannedDoc.detectedQuad.points[3].x);
+
+            Log.d("DOC-GRAPHIC", "Bottom left: x: " + scannedDoc.detectedQuad.points[3].x + ", y: " + scannedDoc.detectedQuad.points[3].y
+                    + " -> x: " + blX + ", y: " + blY);
+
+            path.moveTo(tlX, tlY);
+            path.lineTo(trX, trY);
+            path.lineTo(brX, brY);
+            path.lineTo(blX, blY);
             path.close();
 
-            PathShape box = new PathShape(path, scaleX(scannedDoc.image.getMetadata().getWidth()),
-                    scaleY(scannedDoc.image.getMetadata().getHeight()));
-            box.draw(canvas, borderPaint);
-            box.draw(canvas, bodyPaint);
+            canvas.drawPath(path, borderPaint);
+            canvas.drawPath(path, bodyPaint);
+
+            Log.d("DOC-GRAPHIC", "DONE DRAWING");
         }
     }
 }

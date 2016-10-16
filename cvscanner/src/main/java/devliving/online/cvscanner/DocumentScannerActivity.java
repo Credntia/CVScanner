@@ -6,16 +6,22 @@ import android.app.Activity;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
+import android.graphics.Point;
 import android.hardware.Camera;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.CountDownTimer;
+import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.GestureDetector;
+import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
@@ -49,6 +55,9 @@ public class DocumentScannerActivity extends AppCompatActivity implements Docume
 
     // constants used to pass extra data in the intent
     public static final String ImagePath = "imagePath";
+
+    final Object mLock = new Object();
+    boolean isDocumentSaverBusy = false;
 
     private CameraSource mCameraSource;
     private CameraSourcePreview mPreview;
@@ -105,6 +114,7 @@ public class DocumentScannerActivity extends AppCompatActivity implements Docume
                 int rc = ActivityCompat.checkSelfPermission(DocumentScannerActivity.this, Manifest.permission.CAMERA);
                 if (rc == PackageManager.PERMISSION_GRANTED) {
                     createCameraSource();
+                    startCameraSource();
                 } else {
                     requestCameraPermission();
                 }
@@ -161,6 +171,11 @@ public class DocumentScannerActivity extends AppCompatActivity implements Docume
     @SuppressLint("InlinedApi")
     private void createCameraSource() {
         Context context = getApplicationContext();
+        Point size = new Point();
+        getWindowManager().getDefaultDisplay().getRealSize(size);
+        boolean isProtrait = getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT;
+        int width = Math.min(size.x, size.y);
+        int height = Math.max(size.x, size.y);
 
         DocumentDetector detector = new DocumentDetector();
         DocumentTrackerFactory factory = new DocumentTrackerFactory(mGraphicOverlay, this);
@@ -172,7 +187,7 @@ public class DocumentScannerActivity extends AppCompatActivity implements Docume
         // at long distances.
         CameraSource.Builder builder = new CameraSource.Builder(getApplicationContext(), detector)
                 .setFacing(CameraSource.CAMERA_FACING_BACK)
-                .setRequestedPreviewSize(1600, 1024)
+                .setRequestedPreviewSize(isProtrait? width:height, isProtrait? height:width)
                 .setRequestedFps(15.0f);
 
         // make sure that auto focus is an available option
@@ -292,10 +307,44 @@ public class DocumentScannerActivity extends AppCompatActivity implements Docume
         }
     }
 
-    @Override
-    public void onDocumentDetected(Document document) {
-        if(document != null){
+    void processDocument(Document document){
+        synchronized (mLock) {
+            if(!isDocumentSaverBusy) {
+                isDocumentSaverBusy = true;
+                document.saveDocument(this, new Document.DocumentSaveCallback() {
+                    @Override
+                    public void onStartTask() {
+                        Toast toast = Toast.makeText(DocumentScannerActivity.this, "Saving...", Toast.LENGTH_SHORT);
+                        toast.setGravity(Gravity.CENTER, 0, 0);
+                        toast.show();
+                    }
 
+                    @Override
+                    public void onSaved(String path) {
+                        if(path != null) {
+                            Intent data = new Intent();
+                            data.putExtra(ImagePath, path);
+                            setResult(RESULT_OK, data);
+
+                            finish();
+                        }
+                        isDocumentSaverBusy = false;
+                    }
+                });
+            }
+        }
+    }
+
+    @Override
+    public void onDocumentDetected(final Document document) {
+        Log.d(TAG, "document detected");
+        if(document != null){
+           runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    processDocument(document);
+                }
+            });
         }
     }
 

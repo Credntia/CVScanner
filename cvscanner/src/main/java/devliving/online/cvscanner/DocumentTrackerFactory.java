@@ -19,7 +19,7 @@ public class DocumentTrackerFactory implements MultiProcessor.Factory<Document> 
 
     @Override
     public Tracker<Document> create(Document document) {
-        DocumentGraphic graphic = new DocumentGraphic(mOverlay, document.getImage().getMetadata().getId(), document);
+        DocumentGraphic graphic = new DocumentGraphic(mOverlay, document);
         return new DocumentTracker(mOverlay, graphic, mListener);
     }
 }

@@ -95,8 +95,11 @@ public class Document {
             Mat croppedImage = CVProcessor.fourPointTransform(image, detectedQuad.points);
             image.release();
 
-            String path = saveImageSecurely(mContext, "image_" + getImage().getMetadata().getTimestampMillis() + ".jpg", croppedImage);
+            Mat enhancedImage = CVProcessor.adjustBirghtnessAndContrast(croppedImage, 1);
             croppedImage.release();
+
+            String path = saveImageSecurely(mContext, "image_" + getImage().getMetadata().getTimestampMillis() + ".jpg", enhancedImage);
+            enhancedImage.release();
 
             if(path != null){
                 try {

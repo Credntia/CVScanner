@@ -8,6 +8,8 @@ import org.opencv.android.Utils;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfFloat;
+import org.opencv.core.MatOfInt;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
@@ -323,60 +325,69 @@ public class CVProcessor {
         return doc;
     }
 
-    static void enhanceDocument(Mat src){
-        src.convertTo(src,-1, COLOR_GAIN , COLOR_BIAS);
-        Mat mask = new Mat(src.size(), CvType.CV_8UC1);
-        Imgproc.cvtColor(src,mask,Imgproc.COLOR_RGBA2GRAY);
+    static Mat adjustBirghtnessAndContrast(Mat src, double clipPercentage){
+        int histSize = 256;
+        double alpha, beta;
+        double minGray, maxGray;
 
-        Mat copy = new Mat(src.size(), CvType.CV_8UC3);
-        src.copyTo(copy);
+        Mat gray = null;
+        if(src.type() == CvType.CV_8UC1){
+            gray = src.clone();
+        }
+        else{
+            gray = new Mat();
+            Imgproc.cvtColor(src, gray, src.type() == CvType.CV_8UC3? Imgproc.COLOR_RGB2GRAY:Imgproc.COLOR_RGBA2GRAY);
+        }
 
-        Imgproc.adaptiveThreshold(mask,mask,255,Imgproc.ADAPTIVE_THRESH_MEAN_C,Imgproc.THRESH_BINARY_INV,15,15);
+        if(clipPercentage == 0) {
+            Core.MinMaxLocResult minMaxGray = Core.minMaxLoc(gray);
+            minGray = minMaxGray.minVal;
+            maxGray = minMaxGray.maxVal;
+        }
+        else{
+            Mat hist = new Mat();
+            MatOfInt size = new MatOfInt(histSize);
+            MatOfInt channels = new MatOfInt(0);
+            MatOfFloat ranges = new MatOfFloat(0, 256);
+            Imgproc.calcHist(Arrays.asList(gray), channels, new Mat(), hist, size, ranges, false);
+            gray.release();
 
-        src.setTo(new Scalar(255,255,255));
-        copy.copyTo(src,mask);
+            double[] accumulator = new double[histSize];
 
-        copy.release();
-        mask.release();
-
-        // special color threshold algorithm
-        colorThresh(src);
-    }
-
-    /**
-     *
-     * @param src - must be 8UC3
-     */
-    static void colorThresh(Mat src) {
-        if(src.channels() == 4) Imgproc.cvtColor(src, src, Imgproc.COLOR_RGBA2RGB);
-        Size srcSize = src.size();
-        int size = (int) (srcSize.height * srcSize.width)*3;
-        byte[] d = new byte[size];
-        src.get(0,0,d);
-
-        for (int i=0; i < size; i+=3) {
-
-            // the "& 0xff" operations are needed to convert the signed byte to double
-
-            // avoid unneeded work
-            if ( (double) (d[i] & 0xff) == 255 ) {
-                continue;
+            accumulator[0] = hist.get(0, 0)[0];
+            for(int i = 1; i < histSize; i++){
+                accumulator[i] = accumulator[i - 1] + hist.get(i, 0)[0];
             }
 
-            double max = Math.max(Math.max((double) (d[i] & 0xff), (double) (d[i + 1] & 0xff)),
-                    (double) (d[i + 2] & 0xff));
-            double mean = ((double) (d[i] & 0xff) + (double) (d[i + 1] & 0xff)
-                    + (double) (d[i + 2] & 0xff)) / 3;
+            hist.release();
 
-            if (max > COLOR_THRESH && mean < max * 0.8) {
-                d[i] = (byte) ((double) (d[i] & 0xff) * 255 / max);
-                d[i + 1] = (byte) ((double) (d[i + 1] & 0xff) * 255 / max);
-                d[i + 2] = (byte) ((double) (d[i + 2] & 0xff) * 255 / max);
-            } else {
-                d[i] = d[i + 1] = d[i + 2] = 0;
+            double max = accumulator[accumulator.length - 1];
+            clipPercentage = (clipPercentage * (max/100.0));
+            clipPercentage = clipPercentage / 2.0f;
+
+            minGray = 0;
+            while (accumulator[(int) minGray] < clipPercentage){
+                minGray++;
+            }
+
+            maxGray = histSize - 1;
+            while (accumulator[(int) maxGray] >= (max - clipPercentage)){
+                maxGray--;
             }
         }
-        src.put(0,0,d);
+
+        double inputRange = maxGray - minGray;
+        alpha = (histSize - 1)/inputRange;
+        beta = -minGray * alpha;
+
+        Mat result = new Mat();
+        src.convertTo(result, -1, alpha, beta);
+
+        if(result.type() == CvType.CV_8UC4){
+            Core.mixChannels(Arrays.asList(src), Arrays.asList(result), new MatOfInt(3, 3));
+        }
+
+        return result;
     }
 
     public static class Quadrilateral {

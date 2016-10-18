@@ -390,6 +390,14 @@ public class CVProcessor {
         return result;
     }
 
+    static Mat sharpenImage(Mat src){
+        Mat sharped = new Mat();
+        Imgproc.GaussianBlur(src, sharped, new Size(0, 0), 3);
+        Core.addWeighted(src, 1.5, sharped, -0.5, 0, sharped);
+
+        return sharped;
+    }
+
     public static class Quadrilateral {
         public MatOfPoint contour;
         public Point[] points;

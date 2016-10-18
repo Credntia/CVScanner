@@ -12,11 +12,6 @@
         android:label="@string/app_name"
         android:supportsRtl="true">
 
-        <activity android:name=".CVScannerActivity"
-            android:theme="@style/CVScannerTheme"
-            android:configChanges="orientation|screenSize"
-            />
-
         <activity android:name=".DocumentScannerActivity"
             android:theme="@style/CVScannerTheme"
             android:configChanges="orientation|screenSize"

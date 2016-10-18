@@ -98,6 +98,12 @@ public class Document {
             Mat enhancedImage = CVProcessor.adjustBirghtnessAndContrast(croppedImage, 1);
             croppedImage.release();
 
+            //saveTestImage(enhancedImage, "enhanced.jpg");
+
+            enhancedImage = CVProcessor.sharpenImage(enhancedImage);
+
+            //saveTestImage(enhancedImage, "sharped.jpg");
+
             String path = saveImageSecurely(mContext, "image_" + getImage().getMetadata().getTimestampMillis() + ".jpg", enhancedImage);
             enhancedImage.release();
 
@@ -115,18 +121,22 @@ public class Document {
             return path;
         }
 
-        void saveTestImage(Bitmap image, String name){
+        void saveTestImage(Mat img, String name){
             File dir = new File(Environment.getExternalStorageDirectory(), "/CVScanner/");
             dir.mkdirs();
 
             File file = new File(dir, name);
+
+            Bitmap bitmap = Bitmap.createBitmap((int) img.size().width, (int) img.size().height, Bitmap.Config.ARGB_8888);
+            Utils.matToBitmap(img, bitmap);
+
             FileOutputStream fOut;
             try {
                 if (!file.exists()) {
                     file.createNewFile();
                 }
                 fOut = new FileOutputStream(file);
-                image.compress(Bitmap.CompressFormat.JPEG, 100, fOut);
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fOut);
                 fOut.flush();
                 fOut.close();
             } catch (FileNotFoundException e) {

@@ -9,6 +9,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.graphics.Color;
 import android.graphics.Point;
 import android.hardware.Camera;
 import android.os.Build;
@@ -17,6 +18,7 @@ import android.os.CountDownTimer;
 import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.graphics.drawable.DrawableCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -25,6 +27,7 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.ImageButton;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -59,6 +62,8 @@ public class DocumentScannerActivity extends AppCompatActivity implements Docume
     final Object mLock = new Object();
     boolean isDocumentSaverBusy = false;
 
+    private ImageButton flashToggle;
+
     private CameraSource mCameraSource;
     private CameraSourcePreview mPreview;
     private GraphicOverlay<DocumentGraphic> mGraphicOverlay;
@@ -90,10 +95,37 @@ public class DocumentScannerActivity extends AppCompatActivity implements Docume
 
         mPreview = (CameraSourcePreview) findViewById(R.id.preview);
         mGraphicOverlay = (GraphicOverlay<DocumentGraphic>) findViewById(R.id.graphicOverlay);
+        flashToggle = (ImageButton) findViewById(R.id.flash);
 
         gestureDetector = new GestureDetector(this, new CaptureGestureListener());
 
         loadOpenCV();
+
+        flashToggle.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(mCameraSource != null){
+                    if(mCameraSource.getFlashMode() == Camera.Parameters.FLASH_MODE_TORCH){
+                        mCameraSource.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
+                    }
+                    else mCameraSource.setFlashMode(Camera.Parameters.FLASH_MODE_TORCH);
+
+                    updateFlashButtonColor();
+                }
+            }
+        });
+    }
+
+    void updateFlashButtonColor(){
+        if(mCameraSource != null){
+            int tintColor = Color.LTGRAY;
+
+            if(mCameraSource.getFlashMode() == Camera.Parameters.FLASH_MODE_TORCH){
+                tintColor = Color.YELLOW;
+            }
+
+            DrawableCompat.setTint(flashToggle.getDrawable(), tintColor);
+        }
     }
 
     void loadOpenCV(){

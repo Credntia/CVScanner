@@ -170,13 +170,6 @@ public class DocumentScannerActivity extends AppCompatActivity implements Docume
      */
     @SuppressLint("InlinedApi")
     private void createCameraSource() {
-        Context context = getApplicationContext();
-        Point size = new Point();
-        getWindowManager().getDefaultDisplay().getRealSize(size);
-        boolean isProtrait = getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT;
-        int width = Math.min(size.x, size.y);
-        int height = Math.max(size.x, size.y);
-
         DocumentDetector detector = new DocumentDetector();
         DocumentTrackerFactory factory = new DocumentTrackerFactory(mGraphicOverlay, this);
         detector.setProcessor(
@@ -187,7 +180,6 @@ public class DocumentScannerActivity extends AppCompatActivity implements Docume
         // at long distances.
         CameraSource.Builder builder = new CameraSource.Builder(getApplicationContext(), detector)
                 .setFacing(CameraSource.CAMERA_FACING_BACK)
-                .setRequestedPreviewSize(isProtrait? width:height, isProtrait? height:width)
                 .setRequestedFps(15.0f);
 
         // make sure that auto focus is an available option

@@ -9,9 +9,12 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Point;
 import android.hardware.Camera;
+import android.media.MediaActionSound;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
@@ -22,6 +25,7 @@ import android.support.v4.graphics.drawable.DrawableCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.util.SparseArray;
 import android.view.GestureDetector;
 import android.view.Gravity;
 import android.view.MotionEvent;
@@ -32,6 +36,7 @@ import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
+import com.google.android.gms.vision.Frame;
 import com.google.android.gms.vision.MultiProcessor;
 
 import org.opencv.android.BaseLoaderCallback;
@@ -71,6 +76,8 @@ public class DocumentScannerActivity extends AppCompatActivity implements Docume
     // helper objects for detecting taps and pinches.
     private GestureDetector gestureDetector;
 
+    private DocumentDetector IDDetector;
+    private MediaActionSound sound = new MediaActionSound();
     /**
      * Initializes the UI and creates the detector pipeline.
      */
@@ -202,15 +209,15 @@ public class DocumentScannerActivity extends AppCompatActivity implements Docume
      */
     @SuppressLint("InlinedApi")
     private void createCameraSource() {
-        DocumentDetector detector = new DocumentDetector();
+        IDDetector = new DocumentDetector();
         DocumentTrackerFactory factory = new DocumentTrackerFactory(mGraphicOverlay, this);
-        detector.setProcessor(
+        IDDetector.setProcessor(
                 new MultiProcessor.Builder<>(factory).build());
 
         // Creates and starts the camera.  Note that this uses a higher resolution in comparison
         // to other detection examples to enable the barcode detector to detect small barcodes
         // at long distances.
-        CameraSource.Builder builder = new CameraSource.Builder(getApplicationContext(), detector)
+        CameraSource.Builder builder = new CameraSource.Builder(getApplicationContext(), IDDetector)
                 .setFacing(CameraSource.CAMERA_FACING_BACK)
                 .setRequestedFps(15.0f);
 
@@ -254,6 +261,8 @@ public class DocumentScannerActivity extends AppCompatActivity implements Docume
         if (mPreview != null) {
             mPreview.release();
         }
+
+        if(sound != null) sound.release();
     }
 
     /**
@@ -372,16 +381,65 @@ public class DocumentScannerActivity extends AppCompatActivity implements Docume
         }
     }
 
+    void detectDocumentManually(final byte[] data){
+        Log.d(TAG, "detecting document manually");
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Bitmap image = BitmapFactory.decodeByteArray(data, 0, data.length);
+                if(image != null){
+                    final SparseArray<Document> docs = IDDetector.detect(new Frame.Builder()
+                            .setBitmap(image)
+                            .build());
+
+                    if(docs != null && docs.size() > 0){
+                        Log.d(TAG, "detected document manually");
+                        final Document doc = docs.get(0);
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                processDocument(doc);
+                            }
+                        });
+                    }
+                    else{
+                        finish();
+                    }
+                }
+            }
+        }).start();
+    }
+
+    void takePicture(){
+        if(mCameraSource != null){
+            mCameraSource.takePicture(new CameraSource.ShutterCallback() {
+                @Override
+                public void onShutter() {
+                    sound.play(MediaActionSound.SHUTTER_CLICK);
+                }
+            }, new CameraSource.PictureCallback() {
+                @Override
+                public void onPictureTaken(byte[] data) {
+                    detectDocumentManually(data);
+                }
+            });
+        }
+    }
+
     private class CaptureGestureListener extends GestureDetector.SimpleOnGestureListener {
+        boolean hasShownMsg = false;
         @Override
         public boolean onSingleTapConfirmed(MotionEvent e) {
-            Toast.makeText(DocumentScannerActivity.this, "Double tap to take a picture and force detection", Toast.LENGTH_SHORT).show();
+            if(!hasShownMsg){
+                Toast.makeText(DocumentScannerActivity.this, "Double tap to take a picture and force detection", Toast.LENGTH_SHORT).show();
+                hasShownMsg = true;
+            }
             return false;
         }
 
         @Override
         public boolean onDoubleTap(MotionEvent e) {
-            //TODO take pic
+            takePicture();
             return super.onDoubleTap(e);
         }
     }

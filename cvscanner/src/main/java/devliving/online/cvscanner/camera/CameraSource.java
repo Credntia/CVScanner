@@ -170,6 +170,8 @@ public class CameraSource {
     private Thread mProcessingThread;
     private FrameProcessingRunnable mFrameProcessor;
 
+    private boolean isSafeToTakePicture = false;
+
     /**
      * Map to convert between a byte array, received from the camera, and its associated byte
      * buffer.  We use byte buffers internally because this is a more efficient way to call into
@@ -369,7 +371,7 @@ public class CameraSource {
                 mCamera.setPreviewDisplay(mDummySurfaceView.getHolder());
             }
             mCamera.startPreview();
-
+            isSafeToTakePicture = true;
             mProcessingThread = new Thread(mFrameProcessor);
             mFrameProcessor.setActive(true);
             mProcessingThread.start();
@@ -394,6 +396,8 @@ public class CameraSource {
             mCamera = createCamera();
             mCamera.setPreviewDisplay(surfaceHolder);
             mCamera.startPreview();
+
+            isSafeToTakePicture = true;
 
             mProcessingThread = new Thread(mFrameProcessor);
             mFrameProcessor.setActive(true);
@@ -428,7 +432,7 @@ public class CameraSource {
 
             // clear the buffer to prevent oom exceptions
             mBytesToByteBuffer.clear();
-
+            isSafeToTakePicture = false;
             if (mCamera != null) {
                 mCamera.stopPreview();
                 mCamera.setPreviewCallbackWithBuffer(null);
@@ -512,7 +516,8 @@ public class CameraSource {
      */
     public void takePicture(ShutterCallback shutter, PictureCallback jpeg) {
         synchronized (mCameraLock) {
-            if (mCamera != null) {
+            if (mCamera != null && isSafeToTakePicture) {
+                isSafeToTakePicture = false;
                 PictureStartCallback startCallback = new PictureStartCallback();
                 startCallback.mDelegate = shutter;
                 PictureDoneCallback doneCallback = new PictureDoneCallback();
@@ -716,7 +721,9 @@ public class CameraSource {
             }
             synchronized (mCameraLock) {
                 if (mCamera != null) {
+                    //mCamera.stopPreview();
                     mCamera.startPreview();
+                    isSafeToTakePicture = true;
                 }
             }
         }

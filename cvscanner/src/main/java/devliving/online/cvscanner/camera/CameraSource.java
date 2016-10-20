@@ -60,6 +60,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -141,16 +143,19 @@ public class CameraSource {
     private int mRotation;
 
     private Size mPreviewSize;
+    private Size mPictureSize;
 
     // These values may be requested by the caller.  Due to hardware limitations, we may need to
     // select close, but not exactly the same values for these.
     private float mRequestedFps = 30.0f;
-    private int mRequestedPreviewWidth = 1024;
-    private int mRequestedPreviewHeight = 768;
+    //private int mRequestedPreviewWidth = 1024;
+    //private int mRequestedPreviewHeight = 768;
 
 
     private String mFocusMode = null;
     private String mFlashMode = null;
+
+    private int mCameraId = -1;
 
     // These instances need to be held onto to avoid GC of their underlying resources.  Even though
     // these aren't used outside of the method that creates them, they still must have hard
@@ -227,7 +232,8 @@ public class CameraSource {
          * Also, we try to select a preview size which corresponds to the aspect ratio of an
          * associated full picture size, if applicable.  Default: 1024x768.
          */
-        public Builder setRequestedPreviewSize(int width, int height) {
+
+        /*public Builder setRequestedPreviewSize(int width, int height) {
             // Restrict the requested range to something within the realm of possibility.  The
             // choice of 1000000 is a bit arbitrary -- intended to be well beyond resolutions that
             // devices can support.  We bound this to avoid int overflow in the code later.
@@ -238,7 +244,7 @@ public class CameraSource {
             mCameraSource.mRequestedPreviewWidth = width;
             mCameraSource.mRequestedPreviewHeight = height;
             return this;
-        }
+        }*/
 
         /**
          * Sets the camera to use (either {@link #CAMERA_FACING_BACK} or
@@ -752,17 +758,17 @@ public class CameraSource {
      */
     @SuppressLint("InlinedApi")
     private Camera createCamera() {
-        int requestedCameraId = getIdForRequestedCamera(mFacing);
-        if (requestedCameraId == -1) {
+        mCameraId = getIdForRequestedCamera(mFacing);
+        if (mCameraId == -1) {
             throw new RuntimeException("Could not find requested camera.");
         }
-        Camera camera = Camera.open(requestedCameraId);
+        Camera camera = Camera.open(mCameraId);
 
-        SizePair sizePair = selectSizePair(camera, mRequestedPreviewWidth, mRequestedPreviewHeight);
+        SizePair sizePair = selectSizePair(camera);
         if (sizePair == null) {
             throw new RuntimeException("Could not find suitable preview size.");
         }
-        Size pictureSize = sizePair.pictureSize();
+        mPictureSize = sizePair.pictureSize();
         mPreviewSize = sizePair.previewSize();
 
         int[] previewFpsRange = selectPreviewFpsRange(camera, mRequestedFps);
@@ -772,17 +778,17 @@ public class CameraSource {
 
         Camera.Parameters parameters = camera.getParameters();
 
-        if (pictureSize != null) {
-            parameters.setPictureSize((int) pictureSize.getWidth(), (int) pictureSize.getHeight());
+        if (mPictureSize != null) {
+            parameters.setPictureSize(mPictureSize.getWidth(), mPictureSize.getHeight());
         }
 
-        parameters.setPreviewSize((int) mPreviewSize.getWidth(), (int) mPreviewSize.getHeight());
+        parameters.setPreviewSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
         parameters.setPreviewFpsRange(
                 previewFpsRange[Camera.Parameters.PREVIEW_FPS_MIN_INDEX],
                 previewFpsRange[Camera.Parameters.PREVIEW_FPS_MAX_INDEX]);
         parameters.setPreviewFormat(ImageFormat.NV21);
 
-        setRotation(camera, parameters, requestedCameraId);
+        setRotation(camera, parameters, mCameraId);
 
         if (mFocusMode != null) {
             if (parameters.getSupportedFocusModes().contains(
@@ -852,29 +858,22 @@ public class CameraSource {
      * image.
      *
      * @param camera        the camera to select a preview size from
-     * @param desiredWidth  the desired width of the camera preview frames
-     * @param desiredHeight the desired height of the camera preview frames
      * @return the selected preview and picture size pair
      */
-    private static SizePair selectSizePair(Camera camera, int desiredWidth, int desiredHeight) {
+    private static SizePair selectSizePair(Camera camera) {
         List<SizePair> validPreviewSizes = generateValidPreviewSizeList(camera);
 
-        // The method for selecting the best size is to minimize the sum of the differences between
-        // the desired values and the actual values for width and height.  This is certainly not the
-        // only way to select the best size, but it provides a decent tradeoff between using the
-        // closest aspect ratio vs. using the closest pixel area.
-        SizePair selectedPair = null;
-        int minDiff = Integer.MAX_VALUE;
-        for (SizePair sizePair : validPreviewSizes) {
-            Size size = sizePair.previewSize();
-            int diff = Math.abs((int) size.getWidth() - desiredWidth) +
-                    Math.abs((int) size.getHeight() - desiredHeight);
-            if (diff < minDiff) {
-                selectedPair = sizePair;
-                minDiff = diff;
+        Collections.sort(validPreviewSizes, new Comparator<SizePair>() {
+            @Override
+            public int compare(SizePair lhs, SizePair rhs) {
+                return (rhs.previewSize().getHeight() * rhs.previewSize().getWidth())
+                        - (lhs.previewSize().getHeight() * lhs.previewSize().getWidth());
             }
-        }
+        });
 
+        SizePair selectedPair = validPreviewSizes.get(0);
+        Log.d(TAG, "selected preview size: w:" + selectedPair.previewSize().getWidth()
+                + ", h:" + selectedPair.previewSize().getHeight());
         return selectedPair;
     }
 
@@ -982,6 +981,12 @@ public class CameraSource {
             }
         }
         return selectedFpsRange;
+    }
+
+    public void updateRotation(){
+        if(mCamera != null){
+            setRotation(mCamera, mCamera.getParameters(), mCameraId);
+        }
     }
 
     /**

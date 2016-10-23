@@ -1,6 +1,8 @@
 package devliving.online.cvscannersample;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -9,7 +11,9 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Message;
+import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -53,6 +57,7 @@ import devliving.online.cvscanner.Document;
 public class StepByStepTestActivity extends AppCompatActivity{
 
     final int REQ_PICK_IMAGE = 1;
+    final int REQ_STORAGE_PERM = 11;
 
     RecyclerView contentView;
     ImageAdapter mAdapter;
@@ -103,6 +108,11 @@ public class StepByStepTestActivity extends AppCompatActivity{
 
         mAdapter = new ImageAdapter();
         contentView.setAdapter(mAdapter);
+
+        int result = ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        if(result != PackageManager.PERMISSION_GRANTED){
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQ_STORAGE_PERM);
+        }
     }
 
     @Override
@@ -148,6 +158,18 @@ public class StepByStepTestActivity extends AppCompatActivity{
         }
     }
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        if (requestCode != REQ_STORAGE_PERM) {
+            super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+            return;
+        }
+
+        if (grantResults.length == 0 || grantResults[0] == PackageManager.PERMISSION_DENIED) {
+            finish();
+        }
+    }
+
     HandlerThread imgThread;
     CVTestRunner testRunner;
 
@@ -163,7 +185,7 @@ public class StepByStepTestActivity extends AppCompatActivity{
 
         if(mData != null){
             Message msg = new Message();
-            msg.obj = new CVTestMessage(CVCommand.START_DOCUMENT_SCAN_1, mData);
+            msg.obj = new CVTestMessage(CVCommand.START_DOCUMENT_SCAN_2, mData);
             testRunner.sendMessage(msg);
         }
     }
@@ -182,9 +204,9 @@ public class StepByStepTestActivity extends AppCompatActivity{
     }
 
     enum CVCommand {
-        START_BORDER_DETECTION,
-        START_DOCUMENT_SCAN_1,
-        START_DOCUMENT_SCAN_2;
+        START_BORDER_DETECTION, //sobel
+        START_DOCUMENT_SCAN_1, //edge detection
+        START_DOCUMENT_SCAN_2; //harris
     }
 
     class CVTestMessage {
@@ -403,23 +425,14 @@ public class StepByStepTestActivity extends AppCompatActivity{
                         Imgproc.medianBlur(resizedImg, resizedImg, 5);
                         onNextStep(resizedImg);
 
-                        Mat grayImg = new Mat();
-                        Imgproc.cvtColor(resizedImg, grayImg, Imgproc.COLOR_RGBA2GRAY);
-                        resizedImg.release();
-                        onNextStep(grayImg);
-
-                        Mat filtered = new Mat();
-                        Imgproc.adaptiveThreshold(grayImg, filtered, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                Imgproc.THRESH_BINARY, 11, 1.2);
-                        grayImg.release();
-                        onNextStep(filtered);
-
-                        Imgproc.threshold(filtered, filtered, 180, 255, Imgproc.THRESH_OTSU);
-                        onNextStep(filtered);
+                        Imgproc.line(resizedImg, new Point(0, 0), new Point(resizedImg.cols()-1, 0), new Scalar(0, 0, 0), 1);
 
                         cannedImg = new Mat(newSize, CvType.CV_8UC1);
-                        Imgproc.Canny(filtered, cannedImg, 70, 200, 3, true);
-                        filtered.release();
+                        Imgproc.Canny(resizedImg, cannedImg, 70, 200, 3, true);
+                        resizedImg.release();
+                        onNextStep(cannedImg);
+
+                        Imgproc.threshold(cannedImg, cannedImg, 70, 255, Imgproc.THRESH_OTSU);
                         onNextStep(cannedImg);
 
                         dilatedImg = new Mat(newSize, CvType.CV_8UC1);
@@ -427,12 +440,6 @@ public class StepByStepTestActivity extends AppCompatActivity{
                         Imgproc.dilate(cannedImg, dilatedImg, morph, new Point(-1, -1), 2, 1, new Scalar(1));
                         cannedImg.release();
                         morph.release();
-                        onNextStep(dilatedImg);
-
-                        Mat kernel = new Mat();
-                        Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(3, 3));
-                        Imgproc.morphologyEx(dilatedImg, dilatedImg, Imgproc.MORPH_CLOSE, kernel);
-                        kernel.release();
                         onNextStep(dilatedImg);
 
                         contours = new ArrayList<>();
@@ -483,10 +490,10 @@ public class StepByStepTestActivity extends AppCompatActivity{
                                 scaledPoints[i] = new Point(foundPoints[i].x * ratio, foundPoints[i].y * ratio);
                             }
                             Log.d("SCANNER", "drawing lines");
-                            Imgproc.line(img, scaledPoints[0], scaledPoints[1], new Scalar(200, 200, 140));
-                            Imgproc.line(img, scaledPoints[0], scaledPoints[3], new Scalar(200, 200, 140));
-                            Imgproc.line(img, scaledPoints[1], scaledPoints[2], new Scalar(200, 200, 140));
-                            Imgproc.line(img, scaledPoints[3], scaledPoints[2], new Scalar(200, 200, 140));
+                            Imgproc.line(img, scaledPoints[0], scaledPoints[1], new Scalar(250, 0, 0, 5));
+                            Imgproc.line(img, scaledPoints[0], scaledPoints[3], new Scalar(250, 0, 0, 5));
+                            Imgproc.line(img, scaledPoints[1], scaledPoints[2], new Scalar(250, 0, 0, 5));
+                            Imgproc.line(img, scaledPoints[3], scaledPoints[2], new Scalar(250, 0, 0, 5));
                         }
 
                         onNextStep(img);

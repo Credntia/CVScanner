@@ -1,58 +1,29 @@
 package devliving.online.cvscanner;
 
 import android.Manifest;
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Dialog;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.content.res.Configuration;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Color;
-import android.graphics.Point;
-import android.hardware.Camera;
-import android.media.MediaActionSound;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.CountDownTimer;
-import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.graphics.drawable.DrawableCompat;
+import android.support.v4.app.Fragment;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.util.SparseArray;
-import android.view.GestureDetector;
-import android.view.Gravity;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.ImageButton;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
-import com.google.android.gms.vision.Frame;
-import com.google.android.gms.vision.MultiProcessor;
-
-import org.opencv.android.BaseLoaderCallback;
-import org.opencv.android.LoaderCallbackInterface;
-import org.opencv.android.OpenCVLoader;
-
-import java.io.IOException;
-
-import devliving.online.cvscanner.camera.CameraSource;
-import devliving.online.cvscanner.camera.CameraSourcePreview;
-import devliving.online.cvscanner.camera.GraphicOverlay;
 
 /**
  * Created by Mehedi on 10/15/16.
  */
-public class DocumentScannerActivity extends AppCompatActivity implements DocumentTracker.DocumentDetectionListener {
+public class DocumentScannerActivity extends AppCompatActivity implements DocumentScannerFragment.DocumentScannerCallback{
     private static final String TAG = "Barcode-reader";
 
     // intent request code to handle updating play services if needed.
@@ -63,21 +34,8 @@ public class DocumentScannerActivity extends AppCompatActivity implements Docume
 
     // constants used to pass extra data in the intent
     public static final String ImagePath = "imagePath";
+    public static final String IsDocumentMultipage = "isMultiPage";
 
-    final Object mLock = new Object();
-    boolean isDocumentSaverBusy = false;
-
-    private ImageButton flashToggle;
-
-    private CameraSource mCameraSource;
-    private CameraSourcePreview mPreview;
-    private GraphicOverlay<DocumentGraphic> mGraphicOverlay;
-
-    // helper objects for detecting taps and pinches.
-    private GestureDetector gestureDetector;
-
-    private DocumentDetector IDDetector;
-    private MediaActionSound sound = new MediaActionSound();
     /**
      * Initializes the UI and creates the detector pipeline.
      */
@@ -99,71 +57,51 @@ public class DocumentScannerActivity extends AppCompatActivity implements Docume
             getSupportActionBar().hide();
         }
         setContentView(R.layout.scanner_activity);
-
-        mPreview = (CameraSourcePreview) findViewById(R.id.preview);
-        mGraphicOverlay = (GraphicOverlay<DocumentGraphic>) findViewById(R.id.graphicOverlay);
-        flashToggle = (ImageButton) findViewById(R.id.flash);
-
-        gestureDetector = new GestureDetector(this, new CaptureGestureListener());
-
-        loadOpenCV();
-
-        flashToggle.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(mCameraSource != null){
-                    if(mCameraSource.getFlashMode() == Camera.Parameters.FLASH_MODE_TORCH){
-                        mCameraSource.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
-                    }
-                    else mCameraSource.setFlashMode(Camera.Parameters.FLASH_MODE_TORCH);
-
-                    updateFlashButtonColor();
-                }
-            }
-        });
     }
 
-    void updateFlashButtonColor(){
-        if(mCameraSource != null){
-            int tintColor = Color.LTGRAY;
+    @Override
+    protected void onResume() {
+        super.onResume();
 
-            if(mCameraSource.getFlashMode() == Camera.Parameters.FLASH_MODE_TORCH){
-                tintColor = Color.YELLOW;
-            }
-
-            DrawableCompat.setTint(flashToggle.getDrawable(), tintColor);
+        if(getSupportFragmentManager().getFragments() == null || getSupportFragmentManager().getFragments().size() == 0){
+            checkCameraPermission();
         }
     }
 
-    void loadOpenCV(){
-        if(!OpenCVLoader.initDebug()){
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_1_0, getApplicationContext(), mLoaderCallback);
+    void checkCameraPermission(){
+        int rc = ActivityCompat.checkSelfPermission(DocumentScannerActivity.this, Manifest.permission.CAMERA);
+        if (rc == PackageManager.PERMISSION_GRANTED) {
+            checkPlayServices();
+        } else {
+            requestCameraPermission();
+        }
+    }
+
+    void checkPlayServices(){
+        // check that the device has play services available.
+        int code = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(
+                getApplicationContext());
+        if (code != ConnectionResult.SUCCESS) {
+            Dialog dlg =
+                    GoogleApiAvailability.getInstance().getErrorDialog(this, code, RC_HANDLE_GMS);
+            dlg.show();
         }
         else{
-            mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+            addScannerFragment();
         }
     }
 
-    private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
-        @Override
-        public void onManagerConnected(int status) {
-            if(status == LoaderCallbackInterface.SUCCESS){
-                // Check for the camera permission before accessing the camera.  If the
-                // permission is not granted yet, request permission.
-                int rc = ActivityCompat.checkSelfPermission(DocumentScannerActivity.this, Manifest.permission.CAMERA);
-                if (rc == PackageManager.PERMISSION_GRANTED) {
-                    createCameraSource();
-                    startCameraSource();
-                } else {
-                    requestCameraPermission();
-                }
-            }
-            else{
-                Toast.makeText(DocumentScannerActivity.this, "Could not load OpenCV", Toast.LENGTH_SHORT).show();
-                finish();
-            }
+    void addScannerFragment(){
+        boolean isMultipage = false;
+        if(getIntent().getExtras() != null){
+            isMultipage = getIntent().getBooleanExtra(IsDocumentMultipage, isMultipage);
         }
-    };
+
+        Fragment fragment = DocumentScannerFragment.instantiate(isMultipage);
+        getSupportFragmentManager().beginTransaction()
+                .add(R.id.container, fragment)
+                .commit();
+    }
 
     /**
      * Handles the requesting of the camera permission.  This includes
@@ -183,86 +121,16 @@ public class DocumentScannerActivity extends AppCompatActivity implements Docume
 
         final Activity thisActivity = this;
 
-        View.OnClickListener listener = new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                ActivityCompat.requestPermissions(thisActivity, permissions,
-                        RC_HANDLE_CAMERA_PERM);
-            }
-        };
-    }
-
-    @Override
-    public boolean onTouchEvent(MotionEvent e) {
-        boolean c = gestureDetector.onTouchEvent(e);
-
-        return c || super.onTouchEvent(e);
-    }
-
-    /**
-     * Creates and starts the camera.  Note that this uses a higher resolution in comparison
-     * to other detection examples to enable the barcode detector to detect small barcodes
-     * at long distances.
-     *
-     * Suppressing InlinedApi since there is a check that the minimum version is met before using
-     * the constant.
-     */
-    @SuppressLint("InlinedApi")
-    private void createCameraSource() {
-        IDDetector = new DocumentDetector();
-        DocumentTrackerFactory factory = new DocumentTrackerFactory(mGraphicOverlay, this);
-        IDDetector.setProcessor(
-                new MultiProcessor.Builder<>(factory).build());
-
-        // Creates and starts the camera.  Note that this uses a higher resolution in comparison
-        // to other detection examples to enable the barcode detector to detect small barcodes
-        // at long distances.
-        CameraSource.Builder builder = new CameraSource.Builder(getApplicationContext(), IDDetector)
-                .setFacing(CameraSource.CAMERA_FACING_BACK)
-                .setRequestedFps(15.0f);
-
-        // make sure that auto focus is an available option
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-            builder = builder.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
-        }
-
-        mCameraSource = builder
-                .setFlashMode(Camera.Parameters.FLASH_MODE_AUTO)
-                .build();
-    }
-
-    /**
-     * Restarts the camera.
-     */
-    @Override
-    protected void onResume() {
-        super.onResume();
-        startCameraSource();
-    }
-
-    /**
-     * Stops the camera.
-     */
-    @Override
-    protected void onPause() {
-        super.onPause();
-        if (mPreview != null) {
-            mPreview.stop();
-        }
-    }
-
-    /**
-     * Releases the resources associated with the camera source, the associated detectors, and the
-     * rest of the processing pipeline.
-     */
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (mPreview != null) {
-            mPreview.release();
-        }
-
-        if(sound != null) sound.release();
+        new AlertDialog.Builder(this)
+                .setTitle("Camera Permission Required")
+                .setMessage("access to device camera is required for scanning")
+                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        ActivityCompat.requestPermissions(thisActivity, permissions,
+                                RC_HANDLE_CAMERA_PERM);
+                    }
+                }).show();
     }
 
     /**
@@ -294,7 +162,7 @@ public class DocumentScannerActivity extends AppCompatActivity implements Docume
         if (grantResults.length != 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             Log.d(TAG, "Camera permission granted - initialize the camera source");
             // we have permission, so create the camerasource
-            createCameraSource();
+            checkPlayServices();
             return;
         }
 
@@ -314,134 +182,22 @@ public class DocumentScannerActivity extends AppCompatActivity implements Docume
                 .show();
     }
 
-    /**
-     * Starts or restarts the camera source, if it exists.  If the camera source doesn't exist yet
-     * (e.g., because onResume was called before the camera source was created), this will be called
-     * again when the camera source is created.
-     */
-    private void startCameraSource() throws SecurityException {
-        // check that the device has play services available.
-        int code = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(
-                getApplicationContext());
-        if (code != ConnectionResult.SUCCESS) {
-            Dialog dlg =
-                    GoogleApiAvailability.getInstance().getErrorDialog(this, code, RC_HANDLE_GMS);
-            dlg.show();
-        }
+    void setResultAndExit(String path){
+        Intent data = new Intent();
+        data.putExtra(ImagePath, path);
+        setResult(RESULT_OK, data);
 
-        if (mCameraSource != null) {
-            try {
-                mPreview.start(mCameraSource, mGraphicOverlay);
-            } catch (IOException e) {
-                Log.e(TAG, "Unable to start camera source.", e);
-                mCameraSource.release();
-                mCameraSource = null;
-            }
-        }
-    }
-
-    void processDocument(Document document){
-        synchronized (mLock) {
-            if(!isDocumentSaverBusy) {
-                isDocumentSaverBusy = true;
-                document.saveDocument(this, new Document.DocumentSaveCallback() {
-                    @Override
-                    public void onStartTask() {
-                        Toast toast = Toast.makeText(DocumentScannerActivity.this, "Saving...", Toast.LENGTH_SHORT);
-                        toast.setGravity(Gravity.CENTER, 0, 0);
-                        toast.show();
-                    }
-
-                    @Override
-                    public void onSaved(String path) {
-                        if(path != null) {
-                            Intent data = new Intent();
-                            data.putExtra(ImagePath, path);
-                            setResult(RESULT_OK, data);
-
-                            finish();
-                        }
-                        isDocumentSaverBusy = false;
-                    }
-                });
-            }
-        }
+        finish();
     }
 
     @Override
-    public void onDocumentDetected(final Document document) {
-        Log.d(TAG, "document detected");
-        if(document != null){
-           runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    processDocument(document);
-                }
-            });
-        }
+    public void onScannerFailed(String reason) {
+        Toast.makeText(this, "Scanner failed: " + reason, Toast.LENGTH_SHORT).show();
+        finish();
     }
 
-    void detectDocumentManually(final byte[] data){
-        Log.d(TAG, "detecting document manually");
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Bitmap image = BitmapFactory.decodeByteArray(data, 0, data.length);
-                if(image != null){
-                    final SparseArray<Document> docs = IDDetector.detect(new Frame.Builder()
-                            .setBitmap(image)
-                            .build());
-
-                    if(docs != null && docs.size() > 0){
-                        Log.d(TAG, "detected document manually");
-                        final Document doc = docs.get(0);
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                processDocument(doc);
-                            }
-                        });
-                    }
-                    else{
-                        finish();
-                    }
-                }
-            }
-        }).start();
+    @Override
+    public void onDocumentScanned(String path) {
+        setResultAndExit(path);
     }
-
-    void takePicture(){
-        if(mCameraSource != null){
-            mCameraSource.takePicture(new CameraSource.ShutterCallback() {
-                @Override
-                public void onShutter() {
-                    sound.play(MediaActionSound.SHUTTER_CLICK);
-                }
-            }, new CameraSource.PictureCallback() {
-                @Override
-                public void onPictureTaken(byte[] data) {
-                    detectDocumentManually(data);
-                }
-            });
-        }
-    }
-
-    private class CaptureGestureListener extends GestureDetector.SimpleOnGestureListener {
-        boolean hasShownMsg = false;
-        @Override
-        public boolean onSingleTapConfirmed(MotionEvent e) {
-            if(!hasShownMsg){
-                Toast.makeText(DocumentScannerActivity.this, "Double tap to take a picture and force detection", Toast.LENGTH_SHORT).show();
-                hasShownMsg = true;
-            }
-            return false;
-        }
-
-        @Override
-        public boolean onDoubleTap(MotionEvent e) {
-            takePicture();
-            return super.onDoubleTap(e);
-        }
-    }
-
 }

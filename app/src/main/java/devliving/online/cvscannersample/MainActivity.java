@@ -1,8 +1,10 @@
 package devliving.online.cvscannersample;
 
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -39,13 +41,27 @@ public class MainActivity extends AppCompatActivity {
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent i = new Intent(MainActivity.this, DocumentScannerActivity.class);
-                startActivityForResult(i, REQ_SCAN);
+                new AlertDialog.Builder(MainActivity.this)
+                        .setMessage("Does the document/ID has multiple pages i.e Passport?")
+                        .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                Intent i = new Intent(MainActivity.this, DocumentScannerActivity.class);
+                                i.putExtra(DocumentScannerActivity.IsDocumentMultipage, true);
+                                startActivityForResult(i, REQ_SCAN);
+                            }
+                        })
+                        .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                Intent i = new Intent(MainActivity.this, DocumentScannerActivity.class);
+                                i.putExtra(DocumentScannerActivity.IsDocumentMultipage, false);
+                                startActivityForResult(i, REQ_SCAN);
+                            }
+                        }).show();
             }
         });
     }
-
-
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {

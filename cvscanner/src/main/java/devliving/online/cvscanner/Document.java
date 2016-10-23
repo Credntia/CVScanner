@@ -88,7 +88,7 @@ public class Document {
          */
         @Override
         protected String doInBackground(Void... params) {
-            Size imageSize = new Size(getImage().getMetadata().getWidth(), getImage().getMetadata().getHeight());
+            //Size imageSize = new Size(getImage().getMetadata().getWidth(), getImage().getMetadata().getHeight());
             Mat image = new Mat();
             Utils.bitmapToMat(getImage().getBitmap(), image);
 

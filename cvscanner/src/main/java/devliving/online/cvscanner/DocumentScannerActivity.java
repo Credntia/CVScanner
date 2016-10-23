@@ -100,7 +100,7 @@ public class DocumentScannerActivity extends AppCompatActivity implements Docume
         Fragment fragment = DocumentScannerFragment.instantiate(isMultipage);
         getSupportFragmentManager().beginTransaction()
                 .add(R.id.container, fragment)
-                .commit();
+                .commitAllowingStateLoss();
     }
 
     /**

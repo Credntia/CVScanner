@@ -65,13 +65,6 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
         return fragment;
     }
 
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-
-        loadOpenCV();
-    }
-
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -98,6 +91,12 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
         });
         view.setOnTouchListener(this);
         return view;
+    }
+
+    @Override
+    public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        loadOpenCV();
     }
 
     @Override

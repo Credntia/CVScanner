@@ -42,9 +42,8 @@ public class DocumentDetector extends Detector<Document> {
         Mat src = new Mat();
         Utils.bitmapToMat(frame.getBitmap(), src);
 
-        if(drawBoundingLine) Imgproc.line(src, new Point(0, 0), new Point(src.cols()-1, 0), new Scalar(0, 0, 0), 1);
-
-        List<MatOfPoint> contours = CVProcessor.findContours(src);
+        List<MatOfPoint> contours = drawBoundingLine? CVProcessor.findContoursAfterClosing(src):CVProcessor.findContours(src);
+        src.release();
 
         if(!contours.isEmpty()){
             CVProcessor.Quadrilateral quad = CVProcessor.getQuadrilateral(contours, imageSize);

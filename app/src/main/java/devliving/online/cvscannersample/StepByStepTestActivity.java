@@ -425,7 +425,7 @@ public class StepByStepTestActivity extends AppCompatActivity{
                         Imgproc.medianBlur(resizedImg, resizedImg, 5);
                         onNextStep(resizedImg);
 
-                        Imgproc.line(resizedImg, new Point(0, 0), new Point(resizedImg.cols()-1, 0), new Scalar(0, 0, 0), 1);
+                        //Imgproc.line(resizedImg, new Point(0, 0), new Point(resizedImg.cols()-1, 0), new Scalar(0, 0, 0), 1);
 
                         cannedImg = new Mat(newSize, CvType.CV_8UC1);
                         Imgproc.Canny(resizedImg, cannedImg, 70, 200, 3, true);
@@ -440,6 +440,29 @@ public class StepByStepTestActivity extends AppCompatActivity{
                         Imgproc.dilate(cannedImg, dilatedImg, morph, new Point(-1, -1), 2, 1, new Scalar(1));
                         cannedImg.release();
                         morph.release();
+                        onNextStep(dilatedImg);
+
+                        contours = new ArrayList<>();
+                        hierarchy = new Mat();
+                        Imgproc.findContours(dilatedImg, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+                        hierarchy.release();
+
+                        Log.d(TAG, "contours found: " + contours.size());
+
+                        Collections.sort(contours, new Comparator<MatOfPoint>() {
+                            @Override
+                            public int compare(MatOfPoint o1, MatOfPoint o2) {
+                                return Double.valueOf(Imgproc.contourArea(o2)).compareTo(Imgproc.contourArea(o1));
+                            }
+                        });
+
+                        Imgproc.drawContours(dilatedImg, contours, 0, new Scalar(255, 255, 250));
+                        onNextStep(dilatedImg);
+                        //dilatedImg.release();
+
+                        Rect box = Imgproc.boundingRect(contours.get(0));
+
+                        Imgproc.line(dilatedImg, box.tl(), new Point(box.br().x, box.tl().y), new Scalar(255, 255, 255), 2);
                         onNextStep(dilatedImg);
 
                         contours = new ArrayList<>();
@@ -490,10 +513,10 @@ public class StepByStepTestActivity extends AppCompatActivity{
                                 scaledPoints[i] = new Point(foundPoints[i].x * ratio, foundPoints[i].y * ratio);
                             }
                             Log.d("SCANNER", "drawing lines");
-                            Imgproc.line(img, scaledPoints[0], scaledPoints[1], new Scalar(250, 0, 0, 5));
-                            Imgproc.line(img, scaledPoints[0], scaledPoints[3], new Scalar(250, 0, 0, 5));
-                            Imgproc.line(img, scaledPoints[1], scaledPoints[2], new Scalar(250, 0, 0, 5));
-                            Imgproc.line(img, scaledPoints[3], scaledPoints[2], new Scalar(250, 0, 0, 5));
+                            Imgproc.line(img, scaledPoints[0], scaledPoints[1], new Scalar(250, 0, 0), 10);
+                            Imgproc.line(img, scaledPoints[0], scaledPoints[3], new Scalar(250, 0, 0), 10);
+                            Imgproc.line(img, scaledPoints[1], scaledPoints[2], new Scalar(250, 0, 0), 10);
+                            Imgproc.line(img, scaledPoints[3], scaledPoints[2], new Scalar(250, 0, 0), 10);
                         }
 
                         onNextStep(img);

@@ -120,7 +120,7 @@ public class CVProcessor {
 
     public static List<MatOfPoint> findContours(Mat src){
         Mat img = src.clone();
-        src.release();
+
         //find contours
         double ratio = getScaleRatio(img.size());
         int width = (int) (img.size().width / ratio);
@@ -128,6 +128,7 @@ public class CVProcessor {
         Size newSize = new Size(width, height);
         Mat resizedImg = new Mat(newSize, CvType.CV_8UC4);
         Imgproc.resize(img, resizedImg, newSize);
+        img.release();
 
         Imgproc.medianBlur(resizedImg, resizedImg, 5);
 
@@ -147,6 +148,68 @@ public class CVProcessor {
         Mat hierarchy = new Mat();
         Imgproc.findContours(dilatedImg, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
         hierarchy.release();
+        dilatedImg.release();
+
+        Log.d(TAG, "contours found: " + contours.size());
+
+        Collections.sort(contours, new Comparator<MatOfPoint>() {
+            @Override
+            public int compare(MatOfPoint o1, MatOfPoint o2) {
+                return Double.valueOf(Imgproc.contourArea(o2)).compareTo(Imgproc.contourArea(o1));
+            }
+        });
+
+        return contours;
+    }
+
+    public static List<MatOfPoint> findContoursAfterClosing(Mat src){
+        Mat img = src.clone();
+
+        //find contours
+        double ratio = getScaleRatio(img.size());
+        int width = (int) (img.size().width / ratio);
+        int height = (int) (img.size().height / ratio);
+        Size newSize = new Size(width, height);
+        Mat resizedImg = new Mat(newSize, CvType.CV_8UC4);
+        Imgproc.resize(img, resizedImg, newSize);
+        img.release();
+
+        Imgproc.medianBlur(resizedImg, resizedImg, 5);
+
+        Mat cannedImg = new Mat(newSize, CvType.CV_8UC1);
+        Imgproc.Canny(resizedImg, cannedImg, 70, 200, 3, true);
+        resizedImg.release();
+
+        Imgproc.threshold(cannedImg, cannedImg, 70, 255, Imgproc.THRESH_OTSU);
+
+        Mat dilatedImg = new Mat(newSize, CvType.CV_8UC1);
+        Mat morph = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(3, 3));
+        Imgproc.dilate(cannedImg, dilatedImg, morph, new Point(-1, -1), 2, 1, new Scalar(1));
+        cannedImg.release();
+        morph.release();
+
+        ArrayList<MatOfPoint> contours = new ArrayList<>();
+        Mat hierarchy = new Mat();
+        Imgproc.findContours(dilatedImg, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+        hierarchy.release();
+
+        Log.d(TAG, "contours found: " + contours.size());
+
+        Collections.sort(contours, new Comparator<MatOfPoint>() {
+            @Override
+            public int compare(MatOfPoint o1, MatOfPoint o2) {
+                return Double.valueOf(Imgproc.contourArea(o2)).compareTo(Imgproc.contourArea(o1));
+            }
+        });
+
+        Rect box = Imgproc.boundingRect(contours.get(0));
+        Imgproc.line(dilatedImg, box.tl(), new Point(box.br().x, box.tl().y), new Scalar(255, 255, 255), 2);
+
+        contours = new ArrayList<>();
+        hierarchy = new Mat();
+        Imgproc.findContours(dilatedImg, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+        hierarchy.release();
+        dilatedImg.release();
 
         Log.d(TAG, "contours found: " + contours.size());
 

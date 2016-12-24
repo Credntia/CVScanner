@@ -164,17 +164,18 @@ public class CVProcessor {
 
     public static List<MatOfPoint> findContoursForMRZ(Mat src){
         Mat img = src.clone();
+        src.release();
         double ratio = getScaleRatio(img.size());
         int width = (int) (img.size().width / ratio);
         int height = (int) (img.size().height / ratio);
         Size newSize = new Size(width, height);
         Mat resizedImg = new Mat(newSize, CvType.CV_8UC4);
         Imgproc.resize(img, resizedImg, newSize);
-        img.release();
 
         Mat gray = new Mat();
         Imgproc.cvtColor(resizedImg, gray, Imgproc.COLOR_BGR2GRAY);
-        Imgproc.blur(gray, gray, new Size(3, 3));
+        //Imgproc.medianBlur(gray, gray, 3);
+        Imgproc.GaussianBlur(gray, gray, new Size(13, 13), -1);
 
         Mat morph = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(13, 5));
         Mat dilatedImg = new Mat();
@@ -191,13 +192,13 @@ public class CVProcessor {
         Imgproc.morphologyEx(gradX, gradX, Imgproc.MORPH_CLOSE, morph);
 
         Mat thresh = new Mat();
-        Imgproc.threshold(gradX, thresh, 0, 255, Imgproc.THRESH_BINARY|Imgproc.THRESH_OTSU);
+        Imgproc.threshold(gradX, thresh, 0, 255, Imgproc.THRESH_OTSU);
         gradX.release();
         morph.release();
 
         morph = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(21, 21));
         Imgproc.morphologyEx(thresh, thresh, Imgproc.MORPH_CLOSE, morph);
-        Imgproc.erode(thresh, thresh, new Mat(), new Point(0, 0), 4);
+        Imgproc.erode(thresh, thresh, new Mat(), new Point(-1, -1), 4);
         morph.release();
 
         int col = (int) resizedImg.size().width;
@@ -211,13 +212,10 @@ public class CVProcessor {
             }
         }
 
-        resizedImg.release();
-
-        ArrayList<MatOfPoint> contours = new ArrayList<>();
+        List<MatOfPoint> contours = new ArrayList<>();
         Mat hierarchy = new Mat();
         Imgproc.findContours(thresh, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
         hierarchy.release();
-        thresh.release();
 
         Log.d(TAG, "contours found: " + contours.size());
 
@@ -325,17 +323,16 @@ public class CVProcessor {
         MatOfPoint rectContour = null;
 
         double ratio = getScaleRatio(srcSize);
-        //int height = Double.valueOf(srcSize.height / ratio).intValue();
         int width = Double.valueOf(srcSize.width / ratio).intValue();
-        //Size size = new Size(width,height);
 
         for(MatOfPoint c:contours){
             Rect bRect = Imgproc.boundingRect(c);
-            float aspectRatio = bRect.width/(float)bRect.height;
+            float aspectRatio = bRect.width / (float)bRect.height;
             float coverageRatio = bRect.width/(float)width;
 
-            Log.d("SCANNER", "MRZ AR: " + aspectRatio + ", CR: " + coverageRatio);
-            if(aspectRatio > 5 && coverageRatio > 0.75){
+            Log.d(TAG, "AR: " + aspectRatio + ", CR: " + coverageRatio);
+
+            if(aspectRatio > 5 && coverageRatio > 0.70){
                 rectContour = c;
                 break;
             }
@@ -350,20 +347,21 @@ public class CVProcessor {
             Point[] points = approx.toArray();
             Log.d("SCANNER", "approx size: " + points.length);
 
+            // select biggest 4 angles polygon
             if (points.length == 4) {
-                Point[] foundPoints = CVProcessor.sortPoints(points);
+                Point[] foundPoints = sortPoints(points);
                 Point lowerLeft = foundPoints[3];
                 Point lowerRight = foundPoints[2];
                 Point topLeft = foundPoints[0];
                 double w = Math.sqrt(Math.pow(lowerRight.x - lowerLeft.x, 2) + Math.pow(lowerRight.y - lowerLeft.y, 2));
                 double h = Math.sqrt(Math.pow(topLeft.x - lowerLeft.x, 2) + Math.pow(topLeft.y - lowerLeft.y, 2));
                 ;
-                int px = (int) ((lowerLeft.x + w) * 0.06);
+                int px = (int) ((lowerLeft.x + w) * 0.03);
                 int py = (int) ((lowerLeft.y + h) * 0.03);
                 lowerLeft.x = lowerLeft.x - px;
                 lowerLeft.y = lowerLeft.y + py;
 
-                px = (int) ((lowerRight.x + w) * 0.02);
+                px = (int) ((lowerRight.x + w) * 0.03);
                 py = (int) ((lowerRight.y + h) * 0.03);
                 lowerRight.x = lowerRight.x + px;
                 lowerRight.y = lowerRight.y + py;
@@ -372,6 +370,7 @@ public class CVProcessor {
                 w = Math.sqrt(Math.pow(lowerRight.x - lowerLeft.x, 2) + Math.pow(lowerRight.y - lowerLeft.y, 2));
 
                 h = pRatio * w;
+                h = h - (h * 0.04);
 
                 foundPoints[1] = new Point(lowerRight.x, lowerRight.y - h);
                 foundPoints[0] = new Point(lowerLeft.x, lowerLeft.y - h);

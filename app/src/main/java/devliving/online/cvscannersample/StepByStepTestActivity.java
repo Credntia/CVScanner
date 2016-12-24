@@ -232,7 +232,7 @@ public class StepByStepTestActivity extends AppCompatActivity{
 
         @Override
         public void handleMessage(Message msg) {
-            final int FIXED_HEIGHT = 800;
+            final int FIXED_HEIGHT = 600;
 
             if(msg.obj != null && msg.obj instanceof CVTestMessage){
                 CVTestMessage data = (CVTestMessage) msg.obj;
@@ -542,12 +542,13 @@ public class StepByStepTestActivity extends AppCompatActivity{
                         Imgproc.medianBlur(resizedImg, resizedImg, 5);
                         onNextStep(resizedImg);
 
-                        //Imgproc.line(resizedImg, new Point(0, 0), new Point(resizedImg.cols()-1, 0), new Scalar(0, 0, 0), 1);
-
                         cannedImg = new Mat(newSize, CvType.CV_8UC1);
                         Imgproc.Canny(resizedImg, cannedImg, 70, 200, 3, true);
                         resizedImg.release();
                         onNextStep(cannedImg);
+
+                        morph = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(5, 13));
+                        Imgproc.morphologyEx(cannedImg, cannedImg, Imgproc.MORPH_CLOSE, morph, new Point(-1, -1), 1);
 
                         Imgproc.threshold(cannedImg, cannedImg, 70, 255, Imgproc.THRESH_OTSU);
                         onNextStep(cannedImg);
@@ -556,8 +557,8 @@ public class StepByStepTestActivity extends AppCompatActivity{
                         morph = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(3, 3));
                         Imgproc.dilate(cannedImg, dilatedImg, morph, new Point(-1, -1), 2, 1, new Scalar(1));
                         cannedImg.release();
-                        morph.release();
                         onNextStep(dilatedImg);
+                        morph.release();
 
                         contours = new ArrayList<>();
                         hierarchy = new Mat();
@@ -591,7 +592,7 @@ public class StepByStepTestActivity extends AppCompatActivity{
                             Log.d("SCANNER", "approx size " + points.length);
 
                             if (points.length == 4) {
-                                Imgproc.drawContours(dilatedImg, contours, idx, new Scalar(0, 0, 255));
+                                Imgproc.drawContours(dilatedImg, contours, idx, new Scalar(255, 255, 255));
                                 onNextStep(dilatedImg);
 
                                 Point[] spoints = CVProcessor.sortPoints(points);
@@ -637,7 +638,8 @@ public class StepByStepTestActivity extends AppCompatActivity{
 
                         gray = new Mat();
                         Imgproc.cvtColor(resizedImg, gray, Imgproc.COLOR_BGR2GRAY);
-                        Imgproc.blur(gray, gray, new Size(3, 3));
+                        Imgproc.medianBlur(gray, gray, 3);
+                        //Imgproc.blur(gray, gray, new Size(3, 3));
                         onNextStep(gray);
 
                         morph = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(13, 5));
@@ -656,14 +658,14 @@ public class StepByStepTestActivity extends AppCompatActivity{
                         Imgproc.morphologyEx(gradX, gradX, Imgproc.MORPH_CLOSE, morph);
 
                         Mat thresh = new Mat();
-                        Imgproc.threshold(gradX, thresh, 0, 255, Imgproc.THRESH_BINARY|Imgproc.THRESH_OTSU);
+                        Imgproc.threshold(gradX, thresh, 0, 255, Imgproc.THRESH_OTSU);
                         onNextStep(thresh);
                         gradX.release();
                         morph.release();
 
                         morph = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(21, 21));
                         Imgproc.morphologyEx(thresh, thresh, Imgproc.MORPH_CLOSE, morph);
-                        Imgproc.erode(thresh, thresh, new Mat(), new Point(0, 0), 4);
+                        Imgproc.erode(thresh, thresh, new Mat(), new Point(-1, -1), 4);
                         onNextStep(thresh);
                         morph.release();
 
@@ -694,10 +696,13 @@ public class StepByStepTestActivity extends AppCompatActivity{
 
                         rectContour = null;
                         for(MatOfPoint c:contours){
-                            //MatOfPoint2f mat = new MatOfPoint2f(c.toArray());
                             Rect bRect = Imgproc.boundingRect(c);
+                            float aspectRatio = bRect.width / (float)bRect.height;
+                            float coverageRatio = bRect.width/(float)col;
 
-                            if((bRect.width / (float)bRect.height) > 5 && (bRect.width/(float)col) > 0.75){
+                            Log.d(TAG, "AR: " + aspectRatio + ", CR: " + coverageRatio);
+
+                            if(aspectRatio > 5 && coverageRatio > 0.70){
                                 Imgproc.drawContours(resizedImg, Arrays.asList(c), 0, new Scalar(255, 0, 0), 12);
                                 onNextStep(resizedImg);
                                 rectContour = c;
@@ -722,12 +727,12 @@ public class StepByStepTestActivity extends AppCompatActivity{
                                 Point topLeft = foundPoints[0];
                                 double w = Math.sqrt(Math.pow(lowerRight.x - lowerLeft.x, 2) + Math.pow(lowerRight.y - lowerLeft.y, 2));
                                 double h = Math.sqrt(Math.pow(topLeft.x - lowerLeft.x, 2) + Math.pow(topLeft.y - lowerLeft.y, 2));;
-                                int px = (int) ((lowerLeft.x + w) * 0.06);
+                                int px = (int) ((lowerLeft.x + w) * 0.03);
                                 int py = (int) ((lowerLeft.y + h) * 0.03);
                                 lowerLeft.x = lowerLeft.x - px;
                                 lowerLeft.y = lowerLeft.y + py;
 
-                                px = (int) ((lowerRight.x + w) * 0.02);
+                                px = (int) ((lowerRight.x + w) * 0.03);
                                 py = (int) ((lowerRight.y + h) * 0.03);
                                 lowerRight.x = lowerRight.x + px;
                                 lowerRight.y = lowerRight.y + py;
@@ -736,6 +741,7 @@ public class StepByStepTestActivity extends AppCompatActivity{
                                 w = Math.sqrt(Math.pow(lowerRight.x - lowerLeft.x, 2) + Math.pow(lowerRight.y - lowerLeft.y, 2));
 
                                 h = pRatio * w;
+                                h = h - (h * 0.04);
 
                                 foundPoints[1] = new Point(lowerRight.x, lowerRight.y - h);
                                 foundPoints[0] = new Point(lowerLeft.x, lowerLeft.y - h);

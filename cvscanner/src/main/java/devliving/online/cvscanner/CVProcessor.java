@@ -162,6 +162,75 @@ public class CVProcessor {
         return contours;
     }
 
+    public static List<MatOfPoint> findContoursForMRZ(Mat src){
+        Mat img = src.clone();
+        double ratio = getScaleRatio(img.size());
+        int width = (int) (img.size().width / ratio);
+        int height = (int) (img.size().height / ratio);
+        Size newSize = new Size(width, height);
+        Mat resizedImg = new Mat(newSize, CvType.CV_8UC4);
+        Imgproc.resize(img, resizedImg, newSize);
+        img.release();
+
+        Mat gray = new Mat();
+        Imgproc.cvtColor(resizedImg, gray, Imgproc.COLOR_BGR2GRAY);
+        Imgproc.blur(gray, gray, new Size(3, 3));
+
+        Mat morph = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(13, 5));
+        Mat dilatedImg = new Mat();
+        Imgproc.morphologyEx(gray, dilatedImg, Imgproc.MORPH_BLACKHAT, morph);
+        gray.release();
+
+        Mat gradX = new Mat();
+        Imgproc.Sobel(dilatedImg, gradX, CvType.CV_32F, 1, 0);
+        dilatedImg.release();
+        Core.convertScaleAbs(gradX, gradX, 1, 0);
+        Core.MinMaxLocResult minMax = Core.minMaxLoc(gradX);
+        Core.convertScaleAbs(gradX, gradX, (255/(minMax.maxVal - minMax.minVal)),
+                - ((minMax.minVal * 255) / (minMax.maxVal - minMax.minVal)));
+        Imgproc.morphologyEx(gradX, gradX, Imgproc.MORPH_CLOSE, morph);
+
+        Mat thresh = new Mat();
+        Imgproc.threshold(gradX, thresh, 0, 255, Imgproc.THRESH_BINARY|Imgproc.THRESH_OTSU);
+        gradX.release();
+        morph.release();
+
+        morph = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(21, 21));
+        Imgproc.morphologyEx(thresh, thresh, Imgproc.MORPH_CLOSE, morph);
+        Imgproc.erode(thresh, thresh, new Mat(), new Point(0, 0), 4);
+        morph.release();
+
+        int col = (int) resizedImg.size().width;
+        int p = (int) (resizedImg.size().width * 0.05);
+        int row = (int) resizedImg.size().height;
+        for(int i = 0; i < row; i++)
+        {
+            for(int j = 0; j < p; j++){
+                thresh.put(i, j, 0);
+                thresh.put(i, col-j, 0);
+            }
+        }
+
+        resizedImg.release();
+
+        ArrayList<MatOfPoint> contours = new ArrayList<>();
+        Mat hierarchy = new Mat();
+        Imgproc.findContours(thresh, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+        hierarchy.release();
+        thresh.release();
+
+        Log.d(TAG, "contours found: " + contours.size());
+
+        Collections.sort(contours, new Comparator<MatOfPoint>() {
+            @Override
+            public int compare(MatOfPoint o1, MatOfPoint o2) {
+                return Double.valueOf(Imgproc.contourArea(o2)).compareTo(Imgproc.contourArea(o1));
+            }
+        });
+
+        return contours;
+    }
+
     public static List<MatOfPoint> findContoursAfterClosing(Mat src){
         Mat img = src.clone();
 
@@ -246,6 +315,68 @@ public class CVProcessor {
                     return new Quadrilateral( c , foundPoints );
                 }
                 else Log.d("SCANNER", "Not inside defined area");
+            }
+        }
+
+        return null;
+    }
+
+    static public Quadrilateral getQuadForPassport(List<MatOfPoint> contours, Size srcSize){
+        MatOfPoint rectContour = null;
+
+        double ratio = getScaleRatio(srcSize);
+        //int height = Double.valueOf(srcSize.height / ratio).intValue();
+        int width = Double.valueOf(srcSize.width / ratio).intValue();
+        //Size size = new Size(width,height);
+
+        for(MatOfPoint c:contours){
+            Rect bRect = Imgproc.boundingRect(c);
+            float aspectRatio = bRect.width/(float)bRect.height;
+            float coverageRatio = bRect.width/(float)width;
+
+            Log.d("SCANNER", "MRZ AR: " + aspectRatio + ", CR: " + coverageRatio);
+            if(aspectRatio > 5 && coverageRatio > 0.75){
+                rectContour = c;
+                break;
+            }
+        }
+
+        if(rectContour != null) {
+            MatOfPoint2f c2f = new MatOfPoint2f(rectContour.toArray());
+            double peri = Imgproc.arcLength(c2f, true);
+            MatOfPoint2f approx = new MatOfPoint2f();
+            Imgproc.approxPolyDP(c2f, approx, 0.02 * peri, true);
+
+            Point[] points = approx.toArray();
+            Log.d("SCANNER", "approx size: " + points.length);
+
+            if (points.length == 4) {
+                Point[] foundPoints = CVProcessor.sortPoints(points);
+                Point lowerLeft = foundPoints[3];
+                Point lowerRight = foundPoints[2];
+                Point topLeft = foundPoints[0];
+                double w = Math.sqrt(Math.pow(lowerRight.x - lowerLeft.x, 2) + Math.pow(lowerRight.y - lowerLeft.y, 2));
+                double h = Math.sqrt(Math.pow(topLeft.x - lowerLeft.x, 2) + Math.pow(topLeft.y - lowerLeft.y, 2));
+                ;
+                int px = (int) ((lowerLeft.x + w) * 0.06);
+                int py = (int) ((lowerLeft.y + h) * 0.03);
+                lowerLeft.x = lowerLeft.x - px;
+                lowerLeft.y = lowerLeft.y + py;
+
+                px = (int) ((lowerRight.x + w) * 0.02);
+                py = (int) ((lowerRight.y + h) * 0.03);
+                lowerRight.x = lowerRight.x + px;
+                lowerRight.y = lowerRight.y + py;
+
+                float pRatio = 3.465f / 4.921f;
+                w = Math.sqrt(Math.pow(lowerRight.x - lowerLeft.x, 2) + Math.pow(lowerRight.y - lowerLeft.y, 2));
+
+                h = pRatio * w;
+
+                foundPoints[1] = new Point(lowerRight.x, lowerRight.y - h);
+                foundPoints[0] = new Point(lowerLeft.x, lowerLeft.y - h);
+
+                return new Quadrilateral(rectContour, foundPoints);
             }
         }
 

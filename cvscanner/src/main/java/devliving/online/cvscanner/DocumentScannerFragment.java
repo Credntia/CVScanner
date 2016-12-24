@@ -23,6 +23,7 @@ import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
+import com.google.android.gms.vision.Detector;
 import com.google.android.gms.vision.Frame;
 import com.google.android.gms.vision.MultiProcessor;
 
@@ -52,15 +53,17 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
     // helper objects for detecting taps and pinches.
     private GestureDetector gestureDetector;
 
-    private DocumentDetector IDDetector;
+    private Detector<Document> IDDetector;
     private MediaActionSound sound = new MediaActionSound();
 
     private DocumentScannerCallback mListener;
-    private boolean isMultipageDoc = false;
+    private boolean isPassport = false;
 
-    public static DocumentScannerFragment instantiate(boolean isMultiPageDocument){
+    public static DocumentScannerFragment instantiate(boolean isPassport){
         DocumentScannerFragment fragment = new DocumentScannerFragment();
-        fragment.isMultipageDoc = isMultiPageDocument;
+        Bundle args = new Bundle();
+        args.putBoolean(DocumentScannerActivity.IsScanningPassport, isPassport);
+        fragment.setArguments(args);
 
         return fragment;
     }
@@ -89,13 +92,17 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
                 }
             }
         });
-        view.setOnTouchListener(this);
+
         return view;
     }
 
     @Override
     public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+
+        isPassport = getArguments() != null && getArguments().getBoolean(DocumentScannerActivity.IsScanningPassport, false);
+        view.setOnTouchListener(this);
+
         loadOpenCV();
     }
 
@@ -153,7 +160,11 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
      */
     @SuppressLint("InlinedApi")
     private void createCameraSource() {
-        IDDetector = new DocumentDetector(isMultipageDoc);
+        if(isPassport){
+            IDDetector = new PassportDetector();
+        }
+        else IDDetector = new DocumentDetector();
+
         DocumentTrackerFactory factory = new DocumentTrackerFactory(mGraphicOverlay, this);
         IDDetector.setProcessor(
                 new MultiProcessor.Builder<>(factory).build());
@@ -320,13 +331,17 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
      */
     @Override
     public boolean onTouch(View v, MotionEvent event) {
-        return gestureDetector.onTouchEvent(event);
+        Log.d("SCANNER", "fragment got touch");
+        boolean g = gestureDetector.onTouchEvent(event);
+
+        return g || v.onTouchEvent(event);
     }
 
     private class CaptureGestureListener extends GestureDetector.SimpleOnGestureListener {
         boolean hasShownMsg = false;
         @Override
         public boolean onSingleTapConfirmed(MotionEvent e) {
+            Log.d("SCANNER", "fragment got tap");
             if(!hasShownMsg){
                 Toast.makeText(getActivity(), "Double tap to take a picture and force detection", Toast.LENGTH_SHORT).show();
                 hasShownMsg = true;
@@ -337,7 +352,7 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
         @Override
         public boolean onDoubleTap(MotionEvent e) {
             takePicture();
-            return super.onDoubleTap(e);
+            return true;
         }
     }
 

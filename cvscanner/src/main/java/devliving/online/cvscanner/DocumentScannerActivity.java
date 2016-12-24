@@ -34,7 +34,9 @@ public class DocumentScannerActivity extends AppCompatActivity implements Docume
 
     // constants used to pass extra data in the intent
     public static final String ImagePath = "imagePath";
-    public static final String IsDocumentMultipage = "isMultiPage";
+    public static final String IsScanningPassport = "isPassport";
+
+    boolean isScanningPassport;
 
     /**
      * Initializes the UI and creates the detector pipeline.
@@ -92,12 +94,9 @@ public class DocumentScannerActivity extends AppCompatActivity implements Docume
     }
 
     void addScannerFragment(){
-        boolean isMultipage = false;
-        if(getIntent().getExtras() != null){
-            isMultipage = getIntent().getBooleanExtra(IsDocumentMultipage, isMultipage);
-        }
+        isScanningPassport = getIntent().getExtras() != null && getIntent().getBooleanExtra(IsScanningPassport, false);
 
-        Fragment fragment = DocumentScannerFragment.instantiate(isMultipage);
+        Fragment fragment = DocumentScannerFragment.instantiate(isScanningPassport);
         getSupportFragmentManager().beginTransaction()
                 .add(R.id.container, fragment)
                 .commitAllowingStateLoss();

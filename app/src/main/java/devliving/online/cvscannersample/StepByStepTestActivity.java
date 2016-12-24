@@ -39,10 +39,12 @@ import org.opencv.core.Range;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
+import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
@@ -185,7 +187,7 @@ public class StepByStepTestActivity extends AppCompatActivity{
 
         if(mData != null){
             Message msg = new Message();
-            msg.obj = new CVTestMessage(CVCommand.START_DOCUMENT_SCAN_2, mData);
+            msg.obj = new CVTestMessage(CVCommand.START_DOCUMENT_SCAN_MRZ, mData);
             testRunner.sendMessage(msg);
         }
     }
@@ -206,7 +208,9 @@ public class StepByStepTestActivity extends AppCompatActivity{
     enum CVCommand {
         START_BORDER_DETECTION, //sobel
         START_DOCUMENT_SCAN_1, //edge detection
-        START_DOCUMENT_SCAN_2; //harris
+        START_DOCUMENT_SCAN_2, //harris
+        START_DOCUMENT_SCAN_PASSPORT,
+        START_DOCUMENT_SCAN_MRZ
     }
 
     class CVTestMessage {
@@ -521,6 +525,226 @@ public class StepByStepTestActivity extends AppCompatActivity{
 
                         onNextStep(img);
                         img.release();
+                        break;
+
+                    case START_DOCUMENT_SCAN_PASSPORT:
+                        img = data.input.clone();
+                        data.input.release();
+                        //find contours
+                        ratio = img.size().height/FIXED_HEIGHT;
+                        width = (int) (img.size().width / ratio);
+                        height = (int) (img.size().height / ratio);
+                        newSize = new Size(width, height);
+                        resizedImg = new Mat(newSize, CvType.CV_8UC4);
+                        Imgproc.resize(img, resizedImg, newSize);
+                        onNextStep(resizedImg);
+
+                        Imgproc.medianBlur(resizedImg, resizedImg, 5);
+                        onNextStep(resizedImg);
+
+                        //Imgproc.line(resizedImg, new Point(0, 0), new Point(resizedImg.cols()-1, 0), new Scalar(0, 0, 0), 1);
+
+                        cannedImg = new Mat(newSize, CvType.CV_8UC1);
+                        Imgproc.Canny(resizedImg, cannedImg, 70, 200, 3, true);
+                        resizedImg.release();
+                        onNextStep(cannedImg);
+
+                        Imgproc.threshold(cannedImg, cannedImg, 70, 255, Imgproc.THRESH_OTSU);
+                        onNextStep(cannedImg);
+
+                        dilatedImg = new Mat(newSize, CvType.CV_8UC1);
+                        morph = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(3, 3));
+                        Imgproc.dilate(cannedImg, dilatedImg, morph, new Point(-1, -1), 2, 1, new Scalar(1));
+                        cannedImg.release();
+                        morph.release();
+                        onNextStep(dilatedImg);
+
+                        contours = new ArrayList<>();
+                        hierarchy = new Mat();
+                        Imgproc.findContours(dilatedImg, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+                        hierarchy.release();
+
+                        Log.d(TAG, "contours found: " + contours.size());
+
+                        Collections.sort(contours, new Comparator<MatOfPoint>() {
+                            @Override
+                            public int compare(MatOfPoint o1, MatOfPoint o2) {
+                                return Double.valueOf(Imgproc.contourArea(o2)).compareTo(Imgproc.contourArea(o1));
+                            }
+                        });
+
+                        //Imgproc.drawContours(dilatedImg, contours, 0, new Scalar(255, 255, 250));
+                        //onNextStep(dilatedImg);
+
+                        rectContour = null;
+                        foundPoints = null;
+
+                        int idx = 0;
+
+                        for(MatOfPoint contour:contours){
+                            MatOfPoint2f mat = new MatOfPoint2f(contour.toArray());
+                            double peri = Imgproc.arcLength(mat, true);
+                            MatOfPoint2f approx = new MatOfPoint2f();
+                            Imgproc.approxPolyDP(mat, approx, 0.02 * peri, false);
+
+                            Point[] points = approx.toArray();
+                            Log.d("SCANNER", "approx size " + points.length);
+
+                            if (points.length == 4) {
+                                Imgproc.drawContours(dilatedImg, contours, idx, new Scalar(0, 0, 255));
+                                onNextStep(dilatedImg);
+
+                                Point[] spoints = CVProcessor.sortPoints(points);
+
+                                if (CVProcessor.insideArea(spoints, newSize)) {
+                                    rectContour = contour;
+                                    foundPoints = spoints;
+                                    break;
+                                }
+                            }
+
+                            idx++;
+                        }
+
+                        if(rectContour != null){
+                            Point[] scaledPoints = new Point[foundPoints.length];
+
+                            for(int i = 0; i < foundPoints.length; i++){
+                                scaledPoints[i] = new Point(foundPoints[i].x * ratio, foundPoints[i].y * ratio);
+                            }
+                            Log.d("SCANNER", "drawing lines");
+                            Imgproc.line(img, scaledPoints[0], scaledPoints[1], new Scalar(250, 0, 0), 10);
+                            Imgproc.line(img, scaledPoints[0], scaledPoints[3], new Scalar(250, 0, 0), 10);
+                            Imgproc.line(img, scaledPoints[1], scaledPoints[2], new Scalar(250, 0, 0), 10);
+                            Imgproc.line(img, scaledPoints[3], scaledPoints[2], new Scalar(250, 0, 0), 10);
+                        }
+
+                        onNextStep(img);
+                        img.release();
+                        break;
+
+                    case START_DOCUMENT_SCAN_MRZ:
+                        //downscale
+                        img = data.input.clone();
+                        data.input.release();
+                        ratio = img.size().height/FIXED_HEIGHT;
+                        width = (int) (img.size().width / ratio);
+                        height = (int) (img.size().height / ratio);
+                        newSize = new Size(width, height);
+                        resizedImg = new Mat(newSize, CvType.CV_8UC4);
+                        Imgproc.resize(img, resizedImg, newSize);
+                        onNextStep(resizedImg);
+
+                        gray = new Mat();
+                        Imgproc.cvtColor(resizedImg, gray, Imgproc.COLOR_BGR2GRAY);
+                        Imgproc.blur(gray, gray, new Size(3, 3));
+                        onNextStep(gray);
+
+                        morph = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(13, 5));
+                        dilatedImg = new Mat();
+                        Imgproc.morphologyEx(gray, dilatedImg, Imgproc.MORPH_BLACKHAT, morph);
+                        onNextStep(dilatedImg);
+                        gray.release();
+
+                        Mat gradX = new Mat();
+                        Imgproc.Sobel(dilatedImg, gradX, CvType.CV_32F, 1, 0);
+                        dilatedImg.release();
+                        Core.convertScaleAbs(gradX, gradX, 1, 0);
+                        Core.MinMaxLocResult minMax = Core.minMaxLoc(gradX);
+                        Core.convertScaleAbs(gradX, gradX, (255/(minMax.maxVal - minMax.minVal)),
+                                - ((minMax.minVal * 255) / (minMax.maxVal - minMax.minVal)));
+                        Imgproc.morphologyEx(gradX, gradX, Imgproc.MORPH_CLOSE, morph);
+
+                        Mat thresh = new Mat();
+                        Imgproc.threshold(gradX, thresh, 0, 255, Imgproc.THRESH_BINARY|Imgproc.THRESH_OTSU);
+                        onNextStep(thresh);
+                        gradX.release();
+                        morph.release();
+
+                        morph = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(21, 21));
+                        Imgproc.morphologyEx(thresh, thresh, Imgproc.MORPH_CLOSE, morph);
+                        Imgproc.erode(thresh, thresh, new Mat(), new Point(0, 0), 4);
+                        onNextStep(thresh);
+                        morph.release();
+
+                        int col = (int) resizedImg.size().width;
+                        int p = (int) (resizedImg.size().width * 0.05);
+                        int row = (int) resizedImg.size().height;
+                        for(int i = 0; i < row; i++)
+                        {
+                            for(int j = 0; j < p; j++){
+                                thresh.put(i, j, 0);
+                                thresh.put(i, col-j, 0);
+                            }
+                        }
+
+                        contours = new ArrayList<>();
+                        hierarchy = new Mat();
+                        Imgproc.findContours(thresh, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+                        hierarchy.release();
+
+                        Log.d(TAG, "contours found: " + contours.size());
+
+                        Collections.sort(contours, new Comparator<MatOfPoint>() {
+                            @Override
+                            public int compare(MatOfPoint o1, MatOfPoint o2) {
+                                return Double.valueOf(Imgproc.contourArea(o2)).compareTo(Imgproc.contourArea(o1));
+                            }
+                        });
+
+                        rectContour = null;
+                        for(MatOfPoint c:contours){
+                            //MatOfPoint2f mat = new MatOfPoint2f(c.toArray());
+                            Rect bRect = Imgproc.boundingRect(c);
+
+                            if((bRect.width / (float)bRect.height) > 5 && (bRect.width/(float)col) > 0.75){
+                                Imgproc.drawContours(resizedImg, Arrays.asList(c), 0, new Scalar(255, 0, 0), 12);
+                                onNextStep(resizedImg);
+                                rectContour = c;
+                                break;
+                            }
+                        }
+
+                        if(rectContour != null){
+                            MatOfPoint2f c2f = new MatOfPoint2f(rectContour.toArray());
+                            double peri = Imgproc.arcLength(c2f, true);
+                            MatOfPoint2f approx = new MatOfPoint2f();
+                            Imgproc.approxPolyDP(c2f, approx, 0.02 * peri, true);
+
+                            Point[] points = approx.toArray();
+                            Log.d("SCANNER", "approx size: " + points.length);
+
+                            // select biggest 4 angles polygon
+                            if (points.length == 4) {
+                                foundPoints = CVProcessor.sortPoints(points);
+                                Point lowerLeft = foundPoints[3];
+                                Point lowerRight = foundPoints[2];
+                                Point topLeft = foundPoints[0];
+                                double w = Math.sqrt(Math.pow(lowerRight.x - lowerLeft.x, 2) + Math.pow(lowerRight.y - lowerLeft.y, 2));
+                                double h = Math.sqrt(Math.pow(topLeft.x - lowerLeft.x, 2) + Math.pow(topLeft.y - lowerLeft.y, 2));;
+                                int px = (int) ((lowerLeft.x + w) * 0.06);
+                                int py = (int) ((lowerLeft.y + h) * 0.03);
+                                lowerLeft.x = lowerLeft.x - px;
+                                lowerLeft.y = lowerLeft.y + py;
+
+                                px = (int) ((lowerRight.x + w) * 0.02);
+                                py = (int) ((lowerRight.y + h) * 0.03);
+                                lowerRight.x = lowerRight.x + px;
+                                lowerRight.y = lowerRight.y + py;
+
+                                float pRatio = 3.465f/4.921f;
+                                w = Math.sqrt(Math.pow(lowerRight.x - lowerLeft.x, 2) + Math.pow(lowerRight.y - lowerLeft.y, 2));
+
+                                h = pRatio * w;
+
+                                foundPoints[1] = new Point(lowerRight.x, lowerRight.y - h);
+                                foundPoints[0] = new Point(lowerLeft.x, lowerLeft.y - h);
+                                foundPoints = CVProcessor.getUpscaledPoints(foundPoints, ratio);
+
+                                img = CVProcessor.fourPointTransform(img, foundPoints);
+                                onNextStep(img);
+                            }
+                        }
                         break;
                 }
             }

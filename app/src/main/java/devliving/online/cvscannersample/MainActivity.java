@@ -42,12 +42,12 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 new AlertDialog.Builder(MainActivity.this)
-                        .setMessage("Does the document/ID has multiple pages i.e Passport?")
+                        .setMessage("Are you scanning a Passport?")
                         .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
                                 Intent i = new Intent(MainActivity.this, DocumentScannerActivity.class);
-                                i.putExtra(DocumentScannerActivity.IsDocumentMultipage, true);
+                                i.putExtra(DocumentScannerActivity.IsScanningPassport, true);
                                 startActivityForResult(i, REQ_SCAN);
                             }
                         })
@@ -55,7 +55,7 @@ public class MainActivity extends AppCompatActivity {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
                                 Intent i = new Intent(MainActivity.this, DocumentScannerActivity.class);
-                                i.putExtra(DocumentScannerActivity.IsDocumentMultipage, false);
+                                i.putExtra(DocumentScannerActivity.IsScanningPassport, false);
                                 startActivityForResult(i, REQ_SCAN);
                             }
                         }).show();

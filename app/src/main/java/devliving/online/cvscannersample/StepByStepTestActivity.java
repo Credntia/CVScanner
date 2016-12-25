@@ -32,17 +32,20 @@ import org.opencv.android.Utils;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfInt;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
 import org.opencv.core.Range;
 import org.opencv.core.Rect;
+import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
 import java.io.FileNotFoundException;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -695,6 +698,8 @@ public class StepByStepTestActivity extends AppCompatActivity{
                         });
 
                         rectContour = null;
+                        foundPoints = null;
+
                         for(MatOfPoint c:contours){
                             Rect bRect = Imgproc.boundingRect(c);
                             float aspectRatio = bRect.width / (float)bRect.height;
@@ -705,51 +710,86 @@ public class StepByStepTestActivity extends AppCompatActivity{
                             if(aspectRatio > 5 && coverageRatio > 0.70){
                                 Imgproc.drawContours(resizedImg, Arrays.asList(c), 0, new Scalar(255, 0, 0), 12);
                                 onNextStep(resizedImg);
-                                rectContour = c;
-                                break;
+
+                                MatOfPoint2f c2f = new MatOfPoint2f(c.toArray());
+                                double peri = Imgproc.arcLength(c2f, true);
+                                MatOfPoint2f approx = new MatOfPoint2f();
+                                Imgproc.approxPolyDP(c2f, approx, 0.02 * peri, true);
+
+                                Point[] points = approx.toArray();
+                                Log.d("SCANNER", "approx size: " + points.length);
+
+                                // select biggest 4 angles polygon
+                                if (points.length == 4){
+                                    foundPoints = CVProcessor.sortPoints(points);
+                                    break;
+                                }
+                                else if(points.length == 2){
+                                    if(rectContour == null){
+                                        rectContour = c;
+                                        foundPoints = points;
+                                    }
+                                    else{
+                                        //try to merge
+                                        RotatedRect box1 = Imgproc.minAreaRect(new MatOfPoint2f(c.toArray()));
+                                        RotatedRect box2 = Imgproc.minAreaRect(new MatOfPoint2f(rectContour.toArray()));
+
+                                        float ar = (float) (box1.size.width/box2.size.width);
+                                        if(box1.size.width > 0 && box2.size.width > 0 && 0.5 < ar && ar < 2.0) {
+                                            if (Math.abs(box1.angle - box2.angle) <= 0.1 ||
+                                                    Math.abs(Math.PI - (box1.angle - box2.angle)) <= 0.1) {
+                                                double minAngle = Math.min(box1.angle, box2.angle);
+                                                double relX = box1.center.x - box2.center.x;
+                                                double rely = box1.center.y - box2.center.y;
+                                                double distance = Math.abs((rely * Math.cos(minAngle)) - (relX * Math.sin(minAngle)));
+                                                if(distance < (1.5 * (box1.size.height + box2.size.height))){
+                                                    Point[] allPoints = Arrays.copyOf(foundPoints, 4);
+
+                                                    System.arraycopy(points, 0, allPoints, 2, 2);
+                                                    Log.d("SCANNER", "after merge approx size: " + allPoints.length);
+                                                    if (allPoints.length == 4){
+                                                        foundPoints = CVProcessor.sortPoints(allPoints);
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        rectContour = null;
+                                        foundPoints = null;
+                                    }
+                                }
                             }
                         }
 
-                        if(rectContour != null){
-                            MatOfPoint2f c2f = new MatOfPoint2f(rectContour.toArray());
-                            double peri = Imgproc.arcLength(c2f, true);
-                            MatOfPoint2f approx = new MatOfPoint2f();
-                            Imgproc.approxPolyDP(c2f, approx, 0.02 * peri, true);
+                        if(foundPoints != null && foundPoints.length == 4){
+                            Point lowerLeft = foundPoints[3];
+                            Point lowerRight = foundPoints[2];
+                            Point topLeft = foundPoints[0];
+                            double w = Math.sqrt(Math.pow(lowerRight.x - lowerLeft.x, 2) + Math.pow(lowerRight.y - lowerLeft.y, 2));
+                            double h = Math.sqrt(Math.pow(topLeft.x - lowerLeft.x, 2) + Math.pow(topLeft.y - lowerLeft.y, 2));;
+                            int px = (int) ((lowerLeft.x + w) * 0.03);
+                            int py = (int) ((lowerLeft.y + h) * 0.03);
+                            lowerLeft.x = lowerLeft.x - px;
+                            lowerLeft.y = lowerLeft.y + py;
 
-                            Point[] points = approx.toArray();
-                            Log.d("SCANNER", "approx size: " + points.length);
+                            px = (int) ((lowerRight.x + w) * 0.03);
+                            py = (int) ((lowerRight.y + h) * 0.03);
+                            lowerRight.x = lowerRight.x + px;
+                            lowerRight.y = lowerRight.y + py;
 
-                            // select biggest 4 angles polygon
-                            if (points.length == 4) {
-                                foundPoints = CVProcessor.sortPoints(points);
-                                Point lowerLeft = foundPoints[3];
-                                Point lowerRight = foundPoints[2];
-                                Point topLeft = foundPoints[0];
-                                double w = Math.sqrt(Math.pow(lowerRight.x - lowerLeft.x, 2) + Math.pow(lowerRight.y - lowerLeft.y, 2));
-                                double h = Math.sqrt(Math.pow(topLeft.x - lowerLeft.x, 2) + Math.pow(topLeft.y - lowerLeft.y, 2));;
-                                int px = (int) ((lowerLeft.x + w) * 0.03);
-                                int py = (int) ((lowerLeft.y + h) * 0.03);
-                                lowerLeft.x = lowerLeft.x - px;
-                                lowerLeft.y = lowerLeft.y + py;
+                            float pRatio = 3.465f/4.921f;
+                            w = Math.sqrt(Math.pow(lowerRight.x - lowerLeft.x, 2) + Math.pow(lowerRight.y - lowerLeft.y, 2));
 
-                                px = (int) ((lowerRight.x + w) * 0.03);
-                                py = (int) ((lowerRight.y + h) * 0.03);
-                                lowerRight.x = lowerRight.x + px;
-                                lowerRight.y = lowerRight.y + py;
+                            h = pRatio * w;
+                            h = h - (h * 0.04);
 
-                                float pRatio = 3.465f/4.921f;
-                                w = Math.sqrt(Math.pow(lowerRight.x - lowerLeft.x, 2) + Math.pow(lowerRight.y - lowerLeft.y, 2));
+                            foundPoints[1] = new Point(lowerRight.x, lowerRight.y - h);
+                            foundPoints[0] = new Point(lowerLeft.x, lowerLeft.y - h);
+                            foundPoints = CVProcessor.getUpscaledPoints(foundPoints, ratio);
 
-                                h = pRatio * w;
-                                h = h - (h * 0.04);
-
-                                foundPoints[1] = new Point(lowerRight.x, lowerRight.y - h);
-                                foundPoints[0] = new Point(lowerLeft.x, lowerLeft.y - h);
-                                foundPoints = CVProcessor.getUpscaledPoints(foundPoints, ratio);
-
-                                img = CVProcessor.fourPointTransform(img, foundPoints);
-                                onNextStep(img);
-                            }
+                            img = CVProcessor.fourPointTransform(img, foundPoints);
+                            onNextStep(img);
                         }
                         break;
                 }

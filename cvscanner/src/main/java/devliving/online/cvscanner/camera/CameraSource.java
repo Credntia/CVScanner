@@ -558,7 +558,8 @@ public class CameraSource {
         synchronized (mCameraLock) {
             if (mCamera != null && mode != null) {
                 Camera.Parameters parameters = mCamera.getParameters();
-                if (parameters.getSupportedFocusModes().contains(mode)) {
+                if (parameters.getSupportedFocusModes() != null &&
+                        parameters.getSupportedFocusModes().contains(mode)) {
                     parameters.setFocusMode(mode);
                     mCamera.setParameters(parameters);
                     mFocusMode = mode;

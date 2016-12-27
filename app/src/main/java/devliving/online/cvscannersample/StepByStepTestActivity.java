@@ -190,7 +190,7 @@ public class StepByStepTestActivity extends AppCompatActivity{
 
         if(mData != null){
             Message msg = new Message();
-            msg.obj = new CVTestMessage(CVCommand.START_DOCUMENT_SCAN_MRZ, mData);
+            msg.obj = new CVTestMessage(CVCommand.START_DOCUMENT_SCAN_PASSPORT, mData);
             testRunner.sendMessage(msg);
         }
     }
@@ -550,11 +550,11 @@ public class StepByStepTestActivity extends AppCompatActivity{
                         resizedImg.release();
                         onNextStep(cannedImg);
 
-                        morph = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(5, 13));
-                        Imgproc.morphologyEx(cannedImg, cannedImg, Imgproc.MORPH_CLOSE, morph, new Point(-1, -1), 1);
-
                         Imgproc.threshold(cannedImg, cannedImg, 70, 255, Imgproc.THRESH_OTSU);
                         onNextStep(cannedImg);
+
+                        morph = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(13, 13));
+                        Imgproc.morphologyEx(cannedImg, cannedImg, Imgproc.MORPH_CLOSE, morph, new Point(-1, -1), 1);
 
                         dilatedImg = new Mat(newSize, CvType.CV_8UC1);
                         morph = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(3, 3));
@@ -562,6 +562,7 @@ public class StepByStepTestActivity extends AppCompatActivity{
                         cannedImg.release();
                         onNextStep(dilatedImg);
                         morph.release();
+
 
                         contours = new ArrayList<>();
                         hierarchy = new Mat();
@@ -577,54 +578,22 @@ public class StepByStepTestActivity extends AppCompatActivity{
                             }
                         });
 
-                        //Imgproc.drawContours(dilatedImg, contours, 0, new Scalar(255, 255, 250));
-                        //onNextStep(dilatedImg);
-
-                        rectContour = null;
-                        foundPoints = null;
-
-                        int idx = 0;
-
-                        for(MatOfPoint contour:contours){
-                            MatOfPoint2f mat = new MatOfPoint2f(contour.toArray());
-                            double peri = Imgproc.arcLength(mat, true);
-                            MatOfPoint2f approx = new MatOfPoint2f();
-                            Imgproc.approxPolyDP(mat, approx, 0.02 * peri, false);
-
-                            Point[] points = approx.toArray();
-                            Log.d("SCANNER", "approx size " + points.length);
-
-                            if (points.length == 4) {
-                                Imgproc.drawContours(dilatedImg, contours, idx, new Scalar(255, 255, 255));
-                                onNextStep(dilatedImg);
-
-                                Point[] spoints = CVProcessor.sortPoints(points);
-
-                                if (CVProcessor.insideArea(spoints, newSize)) {
-                                    rectContour = contour;
-                                    foundPoints = spoints;
-                                    break;
-                                }
-                            }
-
-                            idx++;
-                        }
-
-                        if(rectContour != null){
+                        foundPoints = CVProcessor.sortPoints(contours.get(0).toArray());
+                        if(foundPoints != null && foundPoints.length == 4){
                             Point[] scaledPoints = new Point[foundPoints.length];
 
                             for(int i = 0; i < foundPoints.length; i++){
                                 scaledPoints[i] = new Point(foundPoints[i].x * ratio, foundPoints[i].y * ratio);
                             }
                             Log.d("SCANNER", "drawing lines");
-                            Imgproc.line(img, scaledPoints[0], scaledPoints[1], new Scalar(250, 0, 0), 10);
-                            Imgproc.line(img, scaledPoints[0], scaledPoints[3], new Scalar(250, 0, 0), 10);
-                            Imgproc.line(img, scaledPoints[1], scaledPoints[2], new Scalar(250, 0, 0), 10);
-                            Imgproc.line(img, scaledPoints[3], scaledPoints[2], new Scalar(250, 0, 0), 10);
+                            Imgproc.line(img, scaledPoints[0], scaledPoints[1], new Scalar(250, 0, 0), 4);
+                            Imgproc.line(img, scaledPoints[0], scaledPoints[3], new Scalar(250, 0, 0), 4);
+                            Imgproc.line(img, scaledPoints[1], scaledPoints[2], new Scalar(250, 0, 0), 4);
+                            Imgproc.line(img, scaledPoints[3], scaledPoints[2], new Scalar(250, 0, 0), 4);
+
+                            onNextStep(img);
                         }
 
-                        onNextStep(img);
-                        img.release();
                         break;
 
                     case START_DOCUMENT_SCAN_MRZ:

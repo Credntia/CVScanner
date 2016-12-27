@@ -1,5 +1,6 @@
 package devliving.online.cvscanner;
 
+import android.support.annotation.Nullable;
 import android.util.Log;
 import android.util.SparseArray;
 
@@ -18,6 +19,12 @@ import java.util.List;
  */
 
 public class PassportDetector extends Detector<Document> {
+    FrameWidthProvider frameWidthProvider;
+
+    public PassportDetector(@Nullable FrameWidthProvider frameWidthProvider) {
+        super();
+        this.frameWidthProvider = frameWidthProvider;
+    }
 
     @Override
     public SparseArray<Document> detect(Frame frame) {
@@ -39,7 +46,8 @@ public class PassportDetector extends Detector<Document> {
 
         if(!contours.isEmpty()){
             Log.d("PASSPORT-DETECTOR", "got contours");
-            CVProcessor.Quadrilateral quad = CVProcessor.getQuadForPassport(contours, imageSize);
+            CVProcessor.Quadrilateral quad = CVProcessor.getQuadForPassport(contours, imageSize,
+                    frameWidthProvider != null? frameWidthProvider.frameWidth():0);
 
             if(quad != null){
                 quad.points = CVProcessor.getUpscaledPoints(quad.points, CVProcessor.getScaleRatio(imageSize));
@@ -48,5 +56,9 @@ public class PassportDetector extends Detector<Document> {
         }
 
         return null;
+    }
+
+    public interface FrameWidthProvider{
+        int frameWidth();
     }
 }

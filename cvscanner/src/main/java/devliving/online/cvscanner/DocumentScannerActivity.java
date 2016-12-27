@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -24,7 +25,7 @@ import com.google.android.gms.common.GoogleApiAvailability;
  * Created by Mehedi on 10/15/16.
  */
 public class DocumentScannerActivity extends AppCompatActivity implements DocumentScannerFragment.DocumentScannerCallback{
-    private static final String TAG = "Barcode-reader";
+    private static final String TAG = "ID-reader";
 
     // intent request code to handle updating play services if needed.
     private static final int RC_HANDLE_GMS = 9001;
@@ -95,6 +96,8 @@ public class DocumentScannerActivity extends AppCompatActivity implements Docume
 
     void addScannerFragment(){
         isScanningPassport = getIntent().getExtras() != null && getIntent().getBooleanExtra(IsScanningPassport, false);
+
+        if(isScanningPassport) setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 
         Fragment fragment = DocumentScannerFragment.instantiate(isScanningPassport);
         getSupportFragmentManager().beginTransaction()

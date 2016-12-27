@@ -1,6 +1,7 @@
 package devliving.online.cvscanner;
 
 import android.annotation.SuppressLint;
+import android.content.res.Configuration;
 import android.support.v4.app.Fragment;
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -101,6 +102,7 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
         super.onViewCreated(view, savedInstanceState);
 
         isPassport = getArguments() != null && getArguments().getBoolean(DocumentScannerActivity.IsScanningPassport, false);
+        mGraphicOverlay.addFrame(new FrameGraphic(mGraphicOverlay, isPassport));
         view.setOnTouchListener(this);
 
         loadOpenCV();
@@ -161,7 +163,7 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
     @SuppressLint("InlinedApi")
     private void createCameraSource() {
         if(isPassport){
-            IDDetector = new PassportDetector();
+            IDDetector = new PassportDetector(mGraphicOverlay.frameWidthProvider());
         }
         else IDDetector = new DocumentDetector();
 

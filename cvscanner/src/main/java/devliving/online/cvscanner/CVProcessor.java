@@ -2,9 +2,6 @@ package devliving.online.cvscanner;
 
 import android.util.Log;
 
-import com.google.android.gms.vision.Frame;
-
-import org.opencv.android.Utils;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
@@ -35,6 +32,8 @@ public class CVProcessor {
     private final static double COLOR_GAIN = 1.5;       // contrast
     private final static double COLOR_BIAS = 0;         // bright
     private final static int COLOR_THRESH = 110;        // threshold
+
+    public final static float PASSPORT_ASPECT_RATIO = 3.465f/4.921f;
 
     public static Rect detectBorder(Mat original){
         Mat src = original.clone();
@@ -320,21 +319,25 @@ public class CVProcessor {
         return null;
     }
 
-    static public Quadrilateral getQuadForPassport(List<MatOfPoint> contours, Size srcSize){
+    static public Quadrilateral getQuadForPassport(List<MatOfPoint> contours, Size srcSize, int frameSize){
+        final int requiredAspectRatio = 5;
+        final float requiredCoverageRatio = 0.90f;
+
         MatOfPoint rectContour = null;
         Point[] foundPoints = null;
 
         double ratio = getScaleRatio(srcSize);
         int width = Double.valueOf(srcSize.width / ratio).intValue();
+        int frameWidth = Double.valueOf(frameSize / ratio).intValue();
 
         for(MatOfPoint c:contours){
             Rect bRect = Imgproc.boundingRect(c);
             float aspectRatio = bRect.width / (float)bRect.height;
-            float coverageRatio = bRect.width/(float)width;
+            float coverageRatio = frameSize != 0? bRect.width/(float)frameWidth:bRect.width/(float)width;
 
-            Log.d(TAG, "AR: " + aspectRatio + ", CR: " + coverageRatio);
+            Log.d(TAG, "AR: " + aspectRatio + ", CR: " + coverageRatio + ", frameWidth: " + frameWidth);
 
-            if(aspectRatio > 5 && coverageRatio > 0.70){
+            if(aspectRatio > requiredAspectRatio && coverageRatio > requiredCoverageRatio){
                 MatOfPoint2f c2f = new MatOfPoint2f(c.toArray());
                 double peri = Imgproc.arcLength(c2f, true);
                 MatOfPoint2f approx = new MatOfPoint2f();
@@ -412,7 +415,6 @@ public class CVProcessor {
 
             foundPoints[1] = new Point(lowerRight.x, lowerRight.y - h);
             foundPoints[0] = new Point(lowerLeft.x, lowerLeft.y - h);
-            //foundPoints = CVProcessor.getUpscaledPoints(foundPoints, ratio);
 
             return new Quadrilateral(rectContour, foundPoints);
         }

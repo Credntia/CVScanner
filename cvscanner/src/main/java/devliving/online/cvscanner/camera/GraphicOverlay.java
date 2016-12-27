@@ -22,10 +22,15 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
 
+import com.google.android.gms.vision.Frame;
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.Vector;
+
+import devliving.online.cvscanner.FrameGraphic;
+import devliving.online.cvscanner.PassportDetector;
 
 /**
  * A view which renders a series of custom graphics to be overlayed on top of an associated preview
@@ -53,6 +58,7 @@ public class GraphicOverlay<T extends GraphicOverlay.Graphic> extends View {
     private float mHeightScaleFactor = 1.0f;
     private int mFacing = CameraSource.CAMERA_FACING_BACK;
     private Set<T> mGraphics = new HashSet<>();
+    private FrameGraphic mFrameGraphic = null;
 
     /**
      * Base class for a custom graphics object to be rendered within the graphic overlay.  Subclass
@@ -144,6 +150,11 @@ public class GraphicOverlay<T extends GraphicOverlay.Graphic> extends View {
         postInvalidate();
     }
 
+    public void addFrame(FrameGraphic frameGraphic){
+        mFrameGraphic = frameGraphic;
+        postInvalidate();
+    }
+
     /**
      * Removes a graphic from the overlay.
      */
@@ -204,6 +215,10 @@ public class GraphicOverlay<T extends GraphicOverlay.Graphic> extends View {
                 mHeightScaleFactor = (float) canvas.getHeight() / (float) mPreviewHeight;
             }
 
+            if(mFrameGraphic != null){
+                mFrameGraphic.draw(canvas);
+            }
+
             for (Graphic graphic : mGraphics) {
                 graphic.draw(canvas);
             }
@@ -220,5 +235,17 @@ public class GraphicOverlay<T extends GraphicOverlay.Graphic> extends View {
         }
 
         return false;
+    }
+
+    PassportDetector.FrameWidthProvider frameWidthProvider = new PassportDetector.FrameWidthProvider() {
+        @Override
+        public int frameWidth() {
+            if(mFrameGraphic != null) return mFrameGraphic.getFrameWidth();
+            return 0;
+        }
+    };
+
+    public PassportDetector.FrameWidthProvider frameWidthProvider(){
+        return frameWidthProvider;
     }
 }

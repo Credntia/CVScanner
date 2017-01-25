@@ -79,8 +79,21 @@ public class MainActivity extends AppCompatActivity {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_step_by_step) {
-            Intent i = new Intent(MainActivity.this, StepByStepTestActivity.class);
-            startActivity(i);
+            new AlertDialog.Builder(this)
+                    .setTitle("Choose one")
+                    .setItems(new String[]{"Document (ID, license etc.)" ,
+                            "Passport - HoughLines algorithm",
+                            "Passport - MRZ based algorithm",
+                        "Passport - MRZ based retrial"}, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            Intent intent = new Intent(MainActivity.this, StepByStepTestActivity.class);
+                            intent.putExtra(StepByStepTestActivity.EXTRA_SCAN_TYPE, StepByStepTestActivity.CVCommand.values()[which]);
+                            startActivity(intent);
+                        }
+                    })
+                    .setCancelable(true)
+                    .show();
             return true;
         }
 

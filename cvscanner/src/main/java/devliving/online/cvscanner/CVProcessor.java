@@ -1,6 +1,11 @@
 package devliving.online.cvscanner;
 
+import android.content.Context;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.support.annotation.UiThread;
 import android.util.Log;
+import android.widget.Toast;
 
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
@@ -130,7 +135,7 @@ public class CVProcessor {
         Imgproc.resize(img, resizedImg, newSize);
         img.release();
 
-        Imgproc.medianBlur(resizedImg, resizedImg, 5);
+        Imgproc.medianBlur(resizedImg, resizedImg, 7);
 
         Mat cannedImg = new Mat(newSize, CvType.CV_8UC1);
         Imgproc.Canny(resizedImg, cannedImg, 70, 200, 3, true);
@@ -290,7 +295,7 @@ public class CVProcessor {
         return contours;
     }
 
-    static public Quadrilateral getQuadrilateral(List<MatOfPoint> contours, Size srcSize){
+    static public Quadrilateral getQuadrilateral(Context context, List<MatOfPoint> contours, Size srcSize){
         double ratio = getScaleRatio(srcSize);
         int height = Double.valueOf(srcSize.height / ratio).intValue();
         int width = Double.valueOf(srcSize.width / ratio).intValue();
@@ -312,16 +317,31 @@ public class CVProcessor {
                 if (insideArea(foundPoints, size)) {
                     return new Quadrilateral( c , foundPoints );
                 }
-                else Log.d("SCANNER", "Not inside defined area");
+                else{
+                    //showToast(context, "Try getting closer to the ID");
+                    Log.d("SCANNER", "Not inside defined area");
+                }
             }
         }
 
+        //showToast(context, "Make sure the ID is on a contrasting background");
         return null;
+    }
+
+    static void showToast(Context context, final String text){
+        final Context mcontext = context;
+        Handler handler = new Handler(context.getMainLooper());
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(mcontext, text, Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     static public Quadrilateral getQuadForPassport(List<MatOfPoint> contours, Size srcSize, int frameSize){
         final int requiredAspectRatio = 5;
-        final float requiredCoverageRatio = 0.90f;
+        final float requiredCoverageRatio = 0.80f;
 
         MatOfPoint rectContour = null;
         Point[] foundPoints = null;

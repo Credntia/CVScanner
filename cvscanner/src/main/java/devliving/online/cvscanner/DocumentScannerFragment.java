@@ -165,7 +165,7 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
         if(isPassport){
             IDDetector = new PassportDetector(mGraphicOverlay.frameWidthProvider());
         }
-        else IDDetector = new DocumentDetector();
+        else IDDetector = new DocumentDetector(getContext());
 
         DocumentTrackerFactory factory = new DocumentTrackerFactory(mGraphicOverlay, this);
         IDDetector.setProcessor(

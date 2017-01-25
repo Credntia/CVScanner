@@ -45,7 +45,6 @@ public class PassportDetector extends Detector<Document> {
         src.release();
 
         if(!contours.isEmpty()){
-            Log.d("PASSPORT-DETECTOR", "got contours");
             CVProcessor.Quadrilateral quad = CVProcessor.getQuadForPassport(contours, imageSize,
                     frameWidthProvider != null? frameWidthProvider.frameWidth():0);
 

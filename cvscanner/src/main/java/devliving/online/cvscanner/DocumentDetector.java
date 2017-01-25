@@ -1,5 +1,6 @@
 package devliving.online.cvscanner;
 
+import android.content.Context;
 import android.util.SparseArray;
 
 import com.google.android.gms.vision.Detector;
@@ -21,6 +22,13 @@ import java.util.List;
  */
 public class DocumentDetector extends Detector<Document> {
 
+    Context mContext;
+
+    public DocumentDetector(Context context){
+        super();
+        mContext = context;
+    }
+
     @Override
     public SparseArray<Document> detect(Frame frame) {
         SparseArray<Document> detections = new SparseArray<>();
@@ -35,12 +43,11 @@ public class DocumentDetector extends Detector<Document> {
         Size imageSize = new Size(frame.getMetadata().getWidth(), frame.getMetadata().getHeight());
         Mat src = new Mat();
         Utils.bitmapToMat(frame.getBitmap(), src);
-
         List<MatOfPoint> contours = CVProcessor.findContours(src);
         src.release();
 
         if(!contours.isEmpty()){
-            CVProcessor.Quadrilateral quad = CVProcessor.getQuadrilateral(contours, imageSize);
+            CVProcessor.Quadrilateral quad = CVProcessor.getQuadrilateral(mContext, contours, imageSize);
 
             if(quad != null){
                 quad.points = CVProcessor.getUpscaledPoints(quad.points, CVProcessor.getScaleRatio(imageSize));

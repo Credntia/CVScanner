@@ -236,16 +236,4 @@ public class GraphicOverlay<T extends GraphicOverlay.Graphic> extends View {
 
         return false;
     }
-
-    PassportDetector.FrameWidthProvider frameWidthProvider = new PassportDetector.FrameWidthProvider() {
-        @Override
-        public int frameWidth() {
-            if(mFrameGraphic != null) return mFrameGraphic.getFrameWidth();
-            return 0;
-        }
-    };
-
-    public PassportDetector.FrameWidthProvider frameWidthProvider(){
-        return frameWidthProvider;
-    }
 }

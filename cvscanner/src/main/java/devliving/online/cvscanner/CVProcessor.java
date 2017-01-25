@@ -11,6 +11,7 @@ import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfFloat;
+import org.opencv.core.MatOfFloat4;
 import org.opencv.core.MatOfInt;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
@@ -293,6 +294,143 @@ public class CVProcessor {
         });
 
         return contours;
+    }
+
+    static public Quadrilateral getQuadForPassport(Mat img){
+        double ratio = getScaleRatio(img.size());
+        double width = img.size().width / ratio;
+        double height = img.size().height / ratio;
+        Size newSize = new Size(width, height);
+        Mat resizedImg = new Mat(newSize, CvType.CV_8UC4);
+        Imgproc.resize(img, resizedImg, newSize);
+
+        Imgproc.medianBlur(resizedImg, resizedImg, 13);
+
+        Mat cannedImg = new Mat(newSize, CvType.CV_8UC1);
+        Imgproc.Canny(resizedImg, cannedImg, 70, 200, 3, true);
+        resizedImg.release();
+
+        Mat morphR = Imgproc.getStructuringElement(Imgproc.CV_SHAPE_RECT, new Size(5, 5));
+
+        Imgproc.morphologyEx(cannedImg, cannedImg, Imgproc.MORPH_CLOSE, morphR, new Point(-1, -1), 1);
+
+        MatOfFloat4 lines = new MatOfFloat4();
+        Imgproc.HoughLinesP(cannedImg, lines, 1, Math.PI/180, 30, 30, 150);
+
+        if(lines.rows() >= 3) {
+            ArrayList<Line> hLines = new ArrayList<>();
+            ArrayList<Line> vLines = new ArrayList<>();
+
+            for (int i = 0; i < lines.rows(); i++) {
+                double[] vec = lines.get(i, 0);
+                Line l = new Line(vec[0], vec[1], vec[2], vec[3]);
+                if(l.isNearHorizontal()) hLines.add(l);
+                else if(l.isNearVertical()) vLines.add(l);
+            }
+
+            Collections.sort(hLines, new Comparator<Line>() {
+                @Override
+                public int compare(Line o1, Line o2) {
+                    return (int) Math.ceil(o1.start.y - o2.start.y);
+                }
+            });
+
+            Collections.sort(vLines, new Comparator<Line>() {
+                @Override
+                public int compare(Line o1, Line o2) {
+                    return (int) Math.ceil(o1.start.x - o2.start.x);
+                }
+            });
+
+            if(hLines.size() >= 2 && vLines.size() >= 2){
+                List<Line> nhLines = Line.joinSegments(hLines);
+
+                List<Line> nvLines = Line.joinSegments(vLines);
+
+                Collections.sort(nhLines, new Comparator<Line>() {
+                    @Override
+                    public int compare(Line o1, Line o2) {
+                        return (int) Math.ceil(o2.length() - o1.length());
+                    }
+                });
+
+                Collections.sort(nvLines, new Comparator<Line>() {
+                    @Override
+                    public int compare(Line o1, Line o2) {
+                        return (int) Math.ceil(o2.length() - o1.length());
+                    }
+                });
+
+                if((nvLines.size() > 1 && nhLines.size() > 0) || (nvLines.size() > 0 && nhLines.size() > 1)){
+                    Line left = null, right = null, bottom = null, top = null;
+
+                    for(Line l:nvLines){
+                        if(l.length()/height < 0.60 || (left != null && right != null)) break;
+
+                        if(left == null && l.isInleft(width)){
+                            left = l;
+                            continue;
+                        }
+
+                        if(right == null && !l.isInleft(width)) right = l;
+                    }
+
+                    for(Line l:nhLines){
+                        if(l.length()/width < 0.60 || (top != null && bottom != null)) break;
+
+                        if(bottom == null && l.isInBottom(height)){
+                            bottom = l;
+                            continue;
+                        }
+
+                        if(top == null && !l.isInBottom(height)) top = l;
+                    }
+
+                    Point[] foundPoints = null;
+
+                    if((left != null && right != null) && (bottom != null || top != null)){
+                        Point vLeft = bottom != null? bottom.intersect(left):top.intersect(left);
+                        Point vRight = bottom != null? bottom.intersect(right):top.intersect(right);
+
+                        if(vLeft != null && vRight != null) {
+                            double pwidth = new Line(vLeft, vRight).length();
+                            double pHeight = PASSPORT_ASPECT_RATIO * pwidth;
+
+                            Point tLeft = getPointOnLine(vLeft, left.end, pHeight);
+                            Point tRight = getPointOnLine(vRight, right.end, pHeight);
+
+                            foundPoints = new Point[]{vLeft, vRight, tLeft, tRight};
+                            foundPoints = sortPoints(foundPoints);
+                            return new Quadrilateral(null, foundPoints);
+                        }
+                    }
+                    else if((top != null && bottom != null) && (left != null || right != null)){
+                        Point vTop = left != null? left.intersect(top):right.intersect(top);
+                        Point vBottom = left != null? left.intersect(bottom):right.intersect(bottom);
+
+                        if(vTop != null && vBottom != null) {
+                            double pHeight = new Line(vTop, vBottom).length();
+                            double pWidth = pHeight/PASSPORT_ASPECT_RATIO;
+
+                            Point tTop = getPointOnLine(vTop, top.end, pWidth);
+                            Point tBottom = getPointOnLine(vBottom, bottom.end, pWidth);
+
+                            foundPoints = new Point[]{tTop, tBottom, vTop, vBottom};
+                            foundPoints = sortPoints(foundPoints);
+                            return new Quadrilateral(null, foundPoints);
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    static public Point getPointOnLine(Point origin, Point another, double distance){
+        double dFactor = distance / new Line(origin, another).length();
+        double X = ((1 - dFactor) * origin.x) + (dFactor * another.x);
+        double Y = ((1 - dFactor) * origin.y) + (dFactor * another.y);
+        return new Point(X, Y);
     }
 
     static public Quadrilateral getQuadrilateral(Context context, List<MatOfPoint> contours, Size srcSize){

@@ -92,27 +92,34 @@ public class CameraSourcePreview extends ViewGroup {
     protected void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
 
-        if(mCameraSource != null) mCameraSource.updateRotation();
+        if(mCameraSource != null){
+            mCameraSource.updateRotation();
+            updateOverlay();
+        }
     }
 
     @RequiresPermission(Manifest.permission.CAMERA)
     private void startIfReady() throws IOException, SecurityException {
         if (mStartRequested && mSurfaceAvailable) {
             mCameraSource.start(mSurfaceView.getHolder());
-            if (mOverlay != null) {
-                Size size = mCameraSource.getPreviewSize();
-                int min = Math.min(size.getWidth(), size.getHeight());
-                int max = Math.max(size.getWidth(), size.getHeight());
-                if (isPortraitMode()) {
-                    // Swap width and height sizes when in portrait, since it will be rotated by
-                    // 90 degrees
-                    mOverlay.setCameraInfo(min, max, mCameraSource.getCameraFacing());
-                } else {
-                    mOverlay.setCameraInfo(max, min, mCameraSource.getCameraFacing());
-                }
-                mOverlay.clear();
-            }
+            updateOverlay();
             mStartRequested = false;
+        }
+    }
+
+    void updateOverlay(){
+        if (mOverlay != null) {
+            Size size = mCameraSource.getPreviewSize();
+            int min = Math.min(size.getWidth(), size.getHeight());
+            int max = Math.max(size.getWidth(), size.getHeight());
+            if (isPortraitMode()) {
+                // Swap width and height sizes when in portrait, since it will be rotated by
+                // 90 degrees
+                mOverlay.setCameraInfo(min, max, mCameraSource.getCameraFacing());
+            } else {
+                mOverlay.setCameraInfo(max, min, mCameraSource.getCameraFacing());
+            }
+            mOverlay.clear();
         }
     }
 

@@ -1,6 +1,5 @@
 package devliving.online.cvscanner;
 
-import android.support.annotation.Nullable;
 import android.util.SparseArray;
 
 import com.google.android.gms.vision.Detector;

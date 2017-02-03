@@ -18,6 +18,7 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.util.TimingLogger;
 import android.view.View;
 
 import org.opencv.android.BaseLoaderCallback;
@@ -300,6 +301,7 @@ public class StepByStepTestActivity extends AppCompatActivity{
 
                 switch (data.command){
                     case DOCUMENT_SCAN:
+                        TimingLogger timingLogger = new TimingLogger(TAG, "Detect Document");
                         Mat img = data.input.clone();
                         data.input.release();
                         //find contours
@@ -328,6 +330,7 @@ public class StepByStepTestActivity extends AppCompatActivity{
                         cannedImg.release();
                         morph.release();
                         onNextStep(dilatedImg);
+                        timingLogger.addSplit("Segmentation");
 
                         ArrayList<MatOfPoint> contours = new ArrayList<>();
                         Mat hierarchy = new Mat();
@@ -346,6 +349,8 @@ public class StepByStepTestActivity extends AppCompatActivity{
                         Imgproc.drawContours(dilatedImg, contours, 0, new Scalar(255, 255, 250));
                         onNextStep(dilatedImg);
                         dilatedImg.release();
+
+                        timingLogger.addSplit("Find contours");
 
                         MatOfPoint rectContour = null;
                         Point[] foundPoints = null;
@@ -369,6 +374,7 @@ public class StepByStepTestActivity extends AppCompatActivity{
                                 }
                             }
                         }
+                        timingLogger.addSplit("Find points");
 
                         if(rectContour != null){
                             Point[] scaledPoints = new Point[foundPoints.length];
@@ -381,13 +387,17 @@ public class StepByStepTestActivity extends AppCompatActivity{
                             Imgproc.line(img, scaledPoints[0], scaledPoints[3], new Scalar(250, 20, 20));
                             Imgproc.line(img, scaledPoints[1], scaledPoints[2], new Scalar(250, 20, 20));
                             Imgproc.line(img, scaledPoints[3], scaledPoints[2], new Scalar(250, 20, 20));
+
+                            timingLogger.addSplit("Upscaling points, drawing lines");
                         }
 
                         onNextStep(img);
+                        timingLogger.dumpToLog();
                         img.release();
                         break;
 
                     case PASSPORT_SCAN_HOUGHLINES:
+                        timingLogger = new TimingLogger(TAG, "Detecting Passport - HoughLinesP");
                         img = data.input.clone();
                         data.input.release();
                         //find contours
@@ -415,9 +425,12 @@ public class StepByStepTestActivity extends AppCompatActivity{
                         //Imgproc.morphologyEx(cannedImg, cannedImg, Imgproc.MORPH_DILATE, morph, new Point(-1, -1), 1);
                         //imgX= buildSkeleton(imgX);
                         //onNextStep(cannedImg);
+                        timingLogger.addSplit("Segmentation");
 
                         MatOfFloat4 lines = new MatOfFloat4();
                         Imgproc.HoughLinesP(cannedImg, lines, 1, Math.PI/180, 30, 30, 150);
+
+                        timingLogger.addSplit("Hough lines");
 
                         Log.d("SCANNER", "got lines: " + lines.rows());
                         if(lines.rows() >= 3) {
@@ -445,6 +458,8 @@ public class StepByStepTestActivity extends AppCompatActivity{
                                 }
                             });
 
+                            timingLogger.addSplit("Separating horizontal and vertical lines");
+
                             if(hLines.size() >= 2 && vLines.size() >= 2){
                                 List<Line> nhLines = Line.joinSegments(hLines);
 
@@ -463,6 +478,8 @@ public class StepByStepTestActivity extends AppCompatActivity{
                                         return (int) Math.ceil(o2.length() - o1.length());
                                     }
                                 });
+
+                                timingLogger.addSplit("Joining line segments");
 
                                 if((nvLines.size() > 1 && nhLines.size() > 0) || (nvLines.size() > 0 && nhLines.size() > 1)){
                                     Line left = null, right = null, bottom = null, top = null;
@@ -488,6 +505,8 @@ public class StepByStepTestActivity extends AppCompatActivity{
 
                                         if(top == null && !l.isInBottom(height)) top = l;
                                     }
+
+                                    timingLogger.addSplit("Finding edges");
 
                                     foundPoints = null;
 
@@ -535,6 +554,8 @@ public class StepByStepTestActivity extends AppCompatActivity{
                                             foundPoints = new Point[]{tTop, tBottom, vTop, vBottom};
                                         }
                                     }
+                                    timingLogger.addSplit("Calculating vertices");
+                                    timingLogger.dumpToLog();
 
                                     if(foundPoints != null){
                                         drawRect(resizedImg, foundPoints);

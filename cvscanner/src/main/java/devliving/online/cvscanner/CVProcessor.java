@@ -5,6 +5,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.support.annotation.UiThread;
 import android.util.Log;
+import android.util.TimingLogger;
 import android.widget.Toast;
 
 import org.opencv.core.Core;
@@ -328,40 +329,40 @@ public class CVProcessor {
                 else if(l.isNearVertical()) vLines.add(l);
             }
 
-            Collections.sort(hLines, new Comparator<Line>() {
-                @Override
-                public int compare(Line o1, Line o2) {
-                    return (int) Math.ceil(o1.start.y - o2.start.y);
-                }
-            });
-
-            Collections.sort(vLines, new Comparator<Line>() {
-                @Override
-                public int compare(Line o1, Line o2) {
-                    return (int) Math.ceil(o1.start.x - o2.start.x);
-                }
-            });
-
             if(hLines.size() >= 2 && vLines.size() >= 2){
+                Collections.sort(hLines, new Comparator<Line>() {
+                    @Override
+                    public int compare(Line o1, Line o2) {
+                        return (int) Math.ceil(o1.start.y - o2.start.y);
+                    }
+                });
+
+                Collections.sort(vLines, new Comparator<Line>() {
+                    @Override
+                    public int compare(Line o1, Line o2) {
+                        return (int) Math.ceil(o1.start.x - o2.start.x);
+                    }
+                });
+
                 List<Line> nhLines = Line.joinSegments(hLines);
 
                 List<Line> nvLines = Line.joinSegments(vLines);
 
-                Collections.sort(nhLines, new Comparator<Line>() {
-                    @Override
-                    public int compare(Line o1, Line o2) {
-                        return (int) Math.ceil(o2.length() - o1.length());
-                    }
-                });
-
-                Collections.sort(nvLines, new Comparator<Line>() {
-                    @Override
-                    public int compare(Line o1, Line o2) {
-                        return (int) Math.ceil(o2.length() - o1.length());
-                    }
-                });
-
                 if((nvLines.size() > 1 && nhLines.size() > 0) || (nvLines.size() > 0 && nhLines.size() > 1)){
+                    Collections.sort(nhLines, new Comparator<Line>() {
+                        @Override
+                        public int compare(Line o1, Line o2) {
+                            return (int) Math.ceil(o2.length() - o1.length());
+                        }
+                    });
+
+                    Collections.sort(nvLines, new Comparator<Line>() {
+                        @Override
+                        public int compare(Line o1, Line o2) {
+                            return (int) Math.ceil(o2.length() - o1.length());
+                        }
+                    });
+
                     Line left = null, right = null, bottom = null, top = null;
 
                     for(Line l:nvLines){

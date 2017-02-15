@@ -131,7 +131,7 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
 
     void loadOpenCV(){
         if(!OpenCVLoader.initDebug()){
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_1_0, getActivity().getApplicationContext(), mLoaderCallback);
+            //OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_1_0, getActivity().getApplicationContext(), mLoaderCallback);
         }
         else{
             mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);

@@ -30,7 +30,7 @@ dependencies {
     compile 'com.android.support:appcompat-v7:24.2.1'
     compile 'com.google.android.gms:play-services-basement:9.4.0'
     compile 'com.google.android.gms:play-services-vision:9.4.0'
-    compile project(':openCVLibrary310')
+    compile 'org.opencv:OpenCV-Android:3.1.0'
 }
 
 def siteUrl = "https://github.com/iamMehedi/CVScanner"

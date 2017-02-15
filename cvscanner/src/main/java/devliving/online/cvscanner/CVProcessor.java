@@ -401,8 +401,6 @@ public class CVProcessor {
                             Point tRight = getPointOnLine(vRight, right.end, pHeight);
 
                             foundPoints = new Point[]{vLeft, vRight, tLeft, tRight};
-                            foundPoints = sortPoints(foundPoints);
-                            return new Quadrilateral(null, foundPoints);
                         }
                     }
                     else if((top != null && bottom != null) && (left != null || right != null)){
@@ -417,7 +415,12 @@ public class CVProcessor {
                             Point tBottom = getPointOnLine(vBottom, bottom.end, pWidth);
 
                             foundPoints = new Point[]{tTop, tBottom, vTop, vBottom};
-                            foundPoints = sortPoints(foundPoints);
+                        }
+                    }
+
+                    if(foundPoints != null){
+                        foundPoints = sortPoints(foundPoints);
+                        if(insideArea(foundPoints, newSize)){
                             return new Quadrilateral(null, foundPoints);
                         }
                     }

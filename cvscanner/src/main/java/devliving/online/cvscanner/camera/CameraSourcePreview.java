@@ -108,8 +108,8 @@ public class CameraSourcePreview extends ViewGroup {
     }
 
     void updateOverlay(){
-        if (mOverlay != null) {
-            Size size = mCameraSource.getPreviewSize();
+        Size size = mCameraSource.getPreviewSize();
+        if (mOverlay != null && size != null) {
             int min = Math.min(size.getWidth(), size.getHeight());
             int max = Math.max(size.getWidth(), size.getHeight());
             if (isPortraitMode()) {

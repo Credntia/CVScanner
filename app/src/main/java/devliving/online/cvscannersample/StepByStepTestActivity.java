@@ -127,7 +127,7 @@ public class StepByStepTestActivity extends AppCompatActivity{
         super.onResume();
 
         if(!OpenCVLoader.initDebug()){
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_1_0, getApplicationContext(), mCallback);
+            //OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_1_0, getApplicationContext(), mCallback);
         }
         else mCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
     }

@@ -21,14 +21,11 @@ import android.content.res.Configuration;
 import android.support.annotation.RequiresPermission;
 import android.util.AttributeSet;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.ViewGroup;
 
 import com.google.android.gms.common.images.Size;
-
-import org.opencv.core.Mat;
 
 import java.io.IOException;
 
@@ -51,7 +48,7 @@ public class CameraSourcePreview extends ViewGroup {
 
         mSurfaceView = new SurfaceView(context);
         mSurfaceView.getHolder().addCallback(new SurfaceCallback());
-        //LayoutParams params = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
+
         addView(mSurfaceView);
     }
 
@@ -152,6 +149,7 @@ public class CameraSourcePreview extends ViewGroup {
         final int layoutWidth = right - left;
         final int layoutHeight = bottom - top;
 
+        /*
         int width = layoutWidth;
         int height = layoutHeight;
 
@@ -175,8 +173,28 @@ public class CameraSourcePreview extends ViewGroup {
 
         Log.d(TAG, "aspect ratio: " + aspectRatio);
 
-        int childWidth;
-        int childHeight;
+        int childWidth = layoutWidth;
+        int childHeight = layoutHeight;
+
+        //TODO fix the following
+        if(layoutHeight < layoutWidth){
+            childWidth = Math.round(childHeight*aspectRatio);
+
+            while (childWidth > layoutWidth) {
+                childHeight = childHeight - 5;
+                childWidth = Math.round(childHeight*aspectRatio);
+            }
+        }
+        else{
+            childHeight = Math.round(childWidth/aspectRatio);
+
+            while (childHeight > layoutHeight) {
+                childWidth = childWidth - 5;
+                childHeight = Math.round(childWidth/aspectRatio);
+            }
+        }
+
+        Log.d(TAG, "layout w: " + layoutWidth + ", h: " + layoutHeight);
 
         if(layoutHeight > layoutWidth){
             //fit height
@@ -207,11 +225,22 @@ public class CameraSourcePreview extends ViewGroup {
             }
         }
 
-        Log.d(TAG, "layout size: w: " + layoutWidth + ", h: " + layoutHeight
-                + " - fit size: w: " + childWidth + ", h: " + childHeight);
-
         for (int i = 0; i < getChildCount(); ++i) {
             getChildAt(i).layout(0, 0, childWidth, childHeight);
+        }
+
+        int l = Math.abs((layoutWidth - childWidth)/2);
+        int t = Math.abs(layoutHeight - childHeight/2);
+        int r = l + childWidth;
+        int b = t + childHeight;
+
+        for (int i = 0; i < getChildCount(); ++i) {
+            getChildAt(i).layout(l, t, r, b);
+        }
+        */
+
+        for (int i = 0; i < getChildCount(); ++i) {
+            getChildAt(i).layout(0, 0, layoutWidth, layoutHeight);
         }
 
         try {

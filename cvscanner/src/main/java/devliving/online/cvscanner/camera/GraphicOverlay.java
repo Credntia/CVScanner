@@ -50,7 +50,7 @@ import devliving.online.cvscanner.PassportDetector;
  * from the preview's coordinate system to the view coordinate system.</li>
  * </ol>
  */
-public class GraphicOverlay<T extends GraphicOverlay.Graphic> extends View {
+public class GraphicOverlay<T extends GraphicOverlay.Graphic> extends View{
     private final Object mLock = new Object();
     private int mPreviewWidth;
     private float mWidthScaleFactor = 1.0f;
@@ -235,5 +235,21 @@ public class GraphicOverlay<T extends GraphicOverlay.Graphic> extends View {
         }
 
         return false;
+    }
+
+    FrameGraphic.FrameSizeProvider frameSizeProvider = new FrameGraphic.FrameSizeProvider() {
+        @Override
+        public int frameWidth() {
+            return mFrameGraphic != null? mFrameGraphic.getFrameWidth():0;
+        }
+
+        @Override
+        public int frameHeight() {
+            return mFrameGraphic != null? mFrameGraphic.getFrameHeight() : 0;
+        }
+    };
+
+    public FrameGraphic.FrameSizeProvider getFrameSizeProvider(){
+        return frameSizeProvider;
     }
 }

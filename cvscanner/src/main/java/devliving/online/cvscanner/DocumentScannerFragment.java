@@ -163,7 +163,7 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
     @SuppressLint("InlinedApi")
     private void createCameraSource() {
         if(isPassport){
-            IDDetector = new PassportDetector();
+            IDDetector = new PassportDetector(mGraphicOverlay != null? mGraphicOverlay.getFrameSizeProvider():null);
         }
         else IDDetector = new DocumentDetector(getContext());
 

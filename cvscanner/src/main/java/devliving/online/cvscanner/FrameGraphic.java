@@ -15,7 +15,7 @@ import devliving.online.cvscanner.camera.GraphicOverlay;
 public class FrameGraphic extends GraphicOverlay.Graphic {
     boolean isForPassport = false;
     Paint borderPaint = null;
-    int frameWidth = 0;
+    int frameWidth = 0, frameHeight = 0;
 
     public FrameGraphic(GraphicOverlay overlay, boolean isForPassport) {
         super(overlay);
@@ -47,6 +47,7 @@ public class FrameGraphic extends GraphicOverlay.Graphic {
         float width = canvas.getWidth();
         float height = canvas.getHeight();
 
+        Log.d("FRAME-GRAPHIC", "canvas size w: " + width + ", h: " + height);
         RectF rect = null;
 
         if(isForPassport){
@@ -75,11 +76,20 @@ public class FrameGraphic extends GraphicOverlay.Graphic {
         }
 
         frameWidth = Float.valueOf(rect.width()).intValue();
+        frameHeight = Float.valueOf(rect.height()).intValue();
         Log.d("FRAME-GRAPHIC", "frame width " + frameWidth);
         canvas.drawRoundRect(rect, 8, 8, borderPaint);
     }
 
     public int getFrameWidth() {
         return frameWidth;
+    }
+    public int getFrameHeight(){
+        return frameHeight;
+    }
+
+    public interface FrameSizeProvider{
+        int frameWidth();
+        int frameHeight();
     }
 }

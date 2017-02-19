@@ -97,7 +97,7 @@ public class DocumentScannerActivity extends AppCompatActivity implements Docume
     void addScannerFragment(){
         isScanningPassport = getIntent().getExtras() != null && getIntent().getBooleanExtra(IsScanningPassport, false);
 
-        if(isScanningPassport) setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+        //if(isScanningPassport) setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE);
 
         Fragment fragment = DocumentScannerFragment.instantiate(isScanningPassport);
         getSupportFragmentManager().beginTransaction()

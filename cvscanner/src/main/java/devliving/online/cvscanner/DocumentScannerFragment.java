@@ -246,9 +246,10 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
                 document.saveDocument(getActivity(), new Document.DocumentSaveCallback() {
                     @Override
                     public void onStartTask() {
+                        /*
                         Toast toast = Toast.makeText(getActivity(), "Saving...", Toast.LENGTH_SHORT);
                         toast.setGravity(Gravity.CENTER, 0, 0);
-                        toast.show();
+                        toast.show();*/
                     }
 
                     @Override

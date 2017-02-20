@@ -257,9 +257,9 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
 
                     @Override
                     public void onSaved(String path) {
-                        if(path != null && mListener != null) {
-                            mListener.onDocumentScanned(path);
-                            if(mCameraSource != null) mCameraSource.stop();
+                        if(mListener != null) {
+                            if(path != null) mListener.onDocumentScanned(path);
+                            else mListener.onScannerFailed("Failed to save document");
                         }
                         isDocumentSaverBusy = false;
                     }
@@ -272,6 +272,7 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
     public void onDocumentDetected(final Document document) {
         Log.d("Scanner", "document detected");
         if(document != null){
+            if(mCameraSource != null) mCameraSource.stop();
             getActivity().runOnUiThread(new Runnable() {
                 @Override
                 public void run() {

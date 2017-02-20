@@ -259,6 +259,7 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
                     public void onSaved(String path) {
                         if(path != null && mListener != null) {
                             mListener.onDocumentScanned(path);
+                            if(mCameraSource != null) mCameraSource.stop();
                         }
                         isDocumentSaverBusy = false;
                     }

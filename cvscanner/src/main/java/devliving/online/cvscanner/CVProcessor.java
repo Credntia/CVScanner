@@ -621,15 +621,19 @@ public class CVProcessor {
     }
 
     public static boolean insideArea(Point[] rp, Size size) {
-
+        return isInside(rp, size) && isLargeEnough(rp, size);
+        /*
         int width = Double.valueOf(size.width).intValue();
         int height = Double.valueOf(size.height).intValue();
+
+        Log.d(TAG, "size w: " + size.width + ", h: " + size.height + "\npoints:\n " + rp[0] + "\n " + rp[2] + "\n " + rp[1] + "\n " + rp[3]);
+
         int baseMeasure = height/4;
 
-        int bottomPos = height-baseMeasure;
+        int bottomPos = height - baseMeasure;
         int topPos = baseMeasure;
-        int leftPos = width/2-baseMeasure;
-        int rightPos = width/2+baseMeasure;
+        int leftPos = width/2 - baseMeasure;
+        int rightPos = width/2 + baseMeasure;
 
         return (
                 rp[0].x <= leftPos && rp[0].y <= topPos
@@ -637,7 +641,28 @@ public class CVProcessor {
                         && rp[2].x >= rightPos && rp[2].y >= bottomPos
                         && rp[3].x <= leftPos && rp[3].y >= bottomPos
 
-        );
+        );*/
+    }
+
+    public static boolean isInside(Point[] points, Size size){
+        int width = Double.valueOf(size.width).intValue();
+        int height = Double.valueOf(size.height).intValue();
+
+        return points[0].x >= 0 && points[0].y >= 0
+                && points[1].x <= width && points[1].y >= 0
+                && points[2].x <= width && points[2].y <= height
+                && points[3].x >= 0 && points[3].y <= height;
+    }
+
+    public  static boolean isLargeEnough(Point[] points, Size size){
+        double contentWidth = Math.max(new Line(points[0], points[1]).length(), new Line(points[3], points[2]).length());
+        double contentHeight = Math.max(new Line(points[0], points[3]).length(), new Line(points[1], points[2]).length());
+
+        double widthRatio = contentWidth/size.width;
+        double heightRatio = contentHeight/size.height;
+        Log.d(TAG, "ratio w: " + size.width + ", h: " + size.height + ", cw: " + contentWidth + ", ch: " + contentHeight);
+
+        return widthRatio >= 0.25 && heightRatio >= 0.25;
     }
 
     public static Point[] getUpscaledPoints(Point[] points, double scaleFactor){

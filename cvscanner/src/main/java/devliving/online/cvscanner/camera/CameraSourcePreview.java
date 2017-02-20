@@ -18,6 +18,8 @@ package devliving.online.cvscanner.camera;
 import android.Manifest;
 import android.content.Context;
 import android.content.res.Configuration;
+import android.graphics.Rect;
+import android.graphics.RectF;
 import android.support.annotation.RequiresPermission;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -146,10 +148,10 @@ public class CameraSourcePreview extends ViewGroup {
 
     @Override
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+
         final int layoutWidth = right - left;
         final int layoutHeight = bottom - top;
 
-        /*
         int width = layoutWidth;
         int height = layoutHeight;
 
@@ -173,42 +175,21 @@ public class CameraSourcePreview extends ViewGroup {
 
         Log.d(TAG, "aspect ratio: " + aspectRatio);
 
-        int childWidth = layoutWidth;
-        int childHeight = layoutHeight;
+        int childWidth;
+        int childHeight;
 
-        //TODO fix the following
         if(layoutHeight < layoutWidth){
-            childWidth = Math.round(childHeight*aspectRatio);
-
-            while (childWidth > layoutWidth) {
-                childHeight = childHeight - 5;
-                childWidth = Math.round(childHeight*aspectRatio);
-            }
-        }
-        else{
-            childHeight = Math.round(childWidth/aspectRatio);
-
-            while (childHeight > layoutHeight) {
-                childWidth = childWidth - 5;
-                childHeight = Math.round(childWidth/aspectRatio);
-            }
-        }
-
-        Log.d(TAG, "layout w: " + layoutWidth + ", h: " + layoutHeight);
-
-        if(layoutHeight > layoutWidth){
             //fit height
             childHeight = layoutHeight;
             childWidth = Math.round(childHeight*aspectRatio);
             Log.d(TAG, "fit height -> cw: " + childWidth + ", ch: " + childHeight);
 
-            if(childWidth < layoutWidth){
-                int diff = layoutWidth - childWidth;
-                childWidth = childWidth + diff;
-                childHeight = childHeight + Math.round(diff/aspectRatio);
-
+            /*
+            while (childWidth < layoutWidth){
+                childWidth++;
+                childHeight = Math.round(childWidth/aspectRatio);
                 Log.d(TAG, "fit height [nested block] -> cw: " + childWidth + ", ch: " + childHeight);
-            }
+            }*/
         }
         else{
             //fit width
@@ -216,31 +197,24 @@ public class CameraSourcePreview extends ViewGroup {
             childHeight = Math.round(childWidth/aspectRatio);
             Log.d(TAG, "fit width -> cw: " + childWidth + ", ch: " + childHeight);
 
-            if(childHeight < layoutHeight){
-                int diff = layoutHeight - childHeight;
-                childHeight = childHeight + diff;
-                childWidth = childWidth + Math.round(diff * aspectRatio);
+            /*
+            while (childHeight < layoutHeight){
+                childHeight++;
+                childWidth = Math.round(childHeight * aspectRatio);
 
                 Log.d(TAG, "fit width [nested block] -> cw: " + childWidth + ", ch: " + childHeight);
-            }
+            }*/
         }
 
-        for (int i = 0; i < getChildCount(); ++i) {
-            getChildAt(i).layout(0, 0, childWidth, childHeight);
-        }
+        Rect rect = new Rect(0, 0, childWidth, childHeight);
+        Float newLeft = (layoutWidth - childWidth)/2.0f;
+        Float newTop = (layoutHeight-childHeight)/2.0f;
 
-        int l = Math.abs((layoutWidth - childWidth)/2);
-        int t = Math.abs(layoutHeight - childHeight/2);
-        int r = l + childWidth;
-        int b = t + childHeight;
+        rect.offsetTo(newLeft.intValue(), newTop.intValue());
+        Log.d(TAG, "new left: " + newLeft + ", top: " + newTop);
 
         for (int i = 0; i < getChildCount(); ++i) {
-            getChildAt(i).layout(l, t, r, b);
-        }
-        */
-
-        for (int i = 0; i < getChildCount(); ++i) {
-            getChildAt(i).layout(0, 0, layoutWidth, layoutHeight);
+            getChildAt(i).layout(rect.left, rect.top, rect.right, rect.bottom);
         }
 
         try {

@@ -148,8 +148,8 @@ public class CameraSource {
     // These values may be requested by the caller.  Due to hardware limitations, we may need to
     // select close, but not exactly the same values for these.
     private float mRequestedFps = 30.0f;
-    //private int mRequestedPreviewWidth = 1024;
-    //private int mRequestedPreviewHeight = 768;
+    private int mRequestedPreviewWidth = 1024;
+    private int mRequestedPreviewHeight = 768;
 
 
     private String mFocusMode = null;
@@ -235,7 +235,7 @@ public class CameraSource {
          * associated full picture size, if applicable.  Default: 1024x768.
          */
 
-        /*public Builder setRequestedPreviewSize(int width, int height) {
+        public Builder setRequestedPreviewSize(int width, int height) {
             // Restrict the requested range to something within the realm of possibility.  The
             // choice of 1000000 is a bit arbitrary -- intended to be well beyond resolutions that
             // devices can support.  We bound this to avoid int overflow in the code later.
@@ -246,7 +246,7 @@ public class CameraSource {
             mCameraSource.mRequestedPreviewWidth = width;
             mCameraSource.mRequestedPreviewHeight = height;
             return this;
-        }*/
+        }
 
         /**
          * Sets the camera to use (either {@link #CAMERA_FACING_BACK} or
@@ -855,6 +855,41 @@ public class CameraSource {
             }
         }
         return -1;
+    }
+
+    /**
+     * Selects the most suitable preview and picture size, given the desired width and height.
+     * <p/>
+     * Even though we may only need the preview size, it's necessary to find both the preview
+     * size and the picture size of the camera together, because these need to have the same aspect
+     * ratio.  On some hardware, if you would only set the preview size, you will get a distorted
+     * image.
+     *
+     * @param camera        the camera to select a preview size from
+     * @param desiredWidth  the desired width of the camera preview frames
+     * @param desiredHeight the desired height of the camera preview frames
+     * @return the selected preview and picture size pair
+     */
+    private static SizePair selectSizePair(Camera camera, int desiredWidth, int desiredHeight) {
+        List<SizePair> validPreviewSizes = generateValidPreviewSizeList(camera);
+
+        // The method for selecting the best size is to minimize the sum of the differences between
+        // the desired values and the actual values for width and height.  This is certainly not the
+        // only way to select the best size, but it provides a decent tradeoff between using the
+        // closest aspect ratio vs. using the closest pixel area.
+        SizePair selectedPair = null;
+        int minDiff = Integer.MAX_VALUE;
+        for (SizePair sizePair : validPreviewSizes) {
+            Size size = sizePair.previewSize();
+            int diff = Math.abs(size.getWidth() - desiredWidth) +
+                    Math.abs(size.getHeight() - desiredHeight);
+            if (diff < minDiff) {
+                selectedPair = sizePair;
+                minDiff = diff;
+            }
+        }
+
+        return selectedPair;
     }
 
     /**

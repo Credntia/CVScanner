@@ -4,6 +4,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.drawable.shapes.PathShape;
 import android.util.Log;
 
 import devliving.online.cvscanner.camera.GraphicOverlay;
@@ -66,6 +67,7 @@ public class DocumentGraphic extends GraphicOverlay.Graphic {
             boolean isPortrait = mOverlay.isPortraitMode();
             Path path = new Path();
 
+            /*
             Log.d("DOC-GRAPHIC", "IsPortrait? " + isPortrait);
 
             float tlX = isPortrait? translateY((float) scannedDoc.detectedQuad.points[0].y):translateX((float) scannedDoc.detectedQuad.points[0].x);
@@ -91,15 +93,23 @@ public class DocumentGraphic extends GraphicOverlay.Graphic {
 
             Log.d("DOC-GRAPHIC", "Top right: x: " + scannedDoc.detectedQuad.points[3].x + ", y: " + scannedDoc.detectedQuad.points[3].y
                     + " -> x: " + trX + ", y: " + trY);
+            */
+            int frameWidth = scannedDoc.getImage().getMetadata().getHeight();
 
-            path.moveTo(tlX, tlY);
-            path.lineTo(trX, trY);
-            path.lineTo(brX, brY);
-            path.lineTo(blX, blY);
+            path.moveTo(translateY((float)(frameWidth - scannedDoc.detectedQuad.points[0].y)), translateX((float)scannedDoc.detectedQuad.points[0].x));
+            path.lineTo(translateY((float)(frameWidth - scannedDoc.detectedQuad.points[1].y)), translateX((float)scannedDoc.detectedQuad.points[1].x));
+            path.lineTo(translateY((float)(frameWidth - scannedDoc.detectedQuad.points[2].y)), translateX((float)scannedDoc.detectedQuad.points[2].x));
+            path.lineTo(translateY((float)(frameWidth - scannedDoc.detectedQuad.points[3].y)), translateX((float)scannedDoc.detectedQuad.points[3].x));
             path.close();
 
-            canvas.drawPath(path, borderPaint);
-            canvas.drawPath(path, bodyPaint);
+            PathShape shape = new PathShape(path, scannedDoc.getImage().getMetadata().getHeight(), scannedDoc.getImage().getMetadata().getWidth());
+            shape.resize(canvas.getWidth(), canvas.getHeight());
+
+            shape.draw(canvas, bodyPaint);
+            shape.draw(canvas, borderPaint);
+
+            //canvas.drawPath(path, borderPaint);
+            //canvas.drawPath(path, bodyPaint);
 
             Log.d("DOC-GRAPHIC", "DONE DRAWING");
         }

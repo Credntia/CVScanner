@@ -96,10 +96,10 @@ public class DocumentGraphic extends GraphicOverlay.Graphic {
             */
             int frameWidth = scannedDoc.getImage().getMetadata().getHeight();
 
-            path.moveTo(translateY((float)(frameWidth - scannedDoc.detectedQuad.points[0].y)), translateX((float)scannedDoc.detectedQuad.points[0].x));
-            path.lineTo(translateY((float)(frameWidth - scannedDoc.detectedQuad.points[1].y)), translateX((float)scannedDoc.detectedQuad.points[1].x));
-            path.lineTo(translateY((float)(frameWidth - scannedDoc.detectedQuad.points[2].y)), translateX((float)scannedDoc.detectedQuad.points[2].x));
-            path.lineTo(translateY((float)(frameWidth - scannedDoc.detectedQuad.points[3].y)), translateX((float)scannedDoc.detectedQuad.points[3].x));
+            path.moveTo(((float)(frameWidth - scannedDoc.detectedQuad.points[0].y)), ((float)scannedDoc.detectedQuad.points[0].x));
+            path.lineTo(((float)(frameWidth - scannedDoc.detectedQuad.points[1].y)), ((float)scannedDoc.detectedQuad.points[1].x));
+            path.lineTo(((float)(frameWidth - scannedDoc.detectedQuad.points[2].y)), ((float)scannedDoc.detectedQuad.points[2].x));
+            path.lineTo(((float)(frameWidth - scannedDoc.detectedQuad.points[3].y)), ((float)scannedDoc.detectedQuad.points[3].x));
             path.close();
 
             PathShape shape = new PathShape(path, scannedDoc.getImage().getMetadata().getHeight(), scannedDoc.getImage().getMetadata().getWidth());

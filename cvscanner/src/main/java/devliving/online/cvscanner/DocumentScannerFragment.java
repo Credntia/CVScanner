@@ -272,10 +272,10 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
     public void onDocumentDetected(final Document document) {
         Log.d("Scanner", "document detected");
         if(document != null){
-            if(mCameraSource != null) mCameraSource.stop();
             getActivity().runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
+                    if(mCameraSource != null) mCameraSource.stop();
                     processDocument(document);
                 }
             });

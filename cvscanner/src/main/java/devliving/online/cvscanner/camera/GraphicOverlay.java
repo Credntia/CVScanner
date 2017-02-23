@@ -240,12 +240,12 @@ public class GraphicOverlay<T extends GraphicOverlay.Graphic> extends View{
     FrameGraphic.FrameSizeProvider frameSizeProvider = new FrameGraphic.FrameSizeProvider() {
         @Override
         public int frameWidth() {
-            return mFrameGraphic != null? mFrameGraphic.getFrameWidth():0;
+            return mFrameGraphic != null? mFrameGraphic.getScaledFrameWidth():0;
         }
 
         @Override
         public int frameHeight() {
-            return mFrameGraphic != null? mFrameGraphic.getFrameHeight() : 0;
+            return mFrameGraphic != null? mFrameGraphic.getScaledFrameHeight() : 0;
         }
     };
 

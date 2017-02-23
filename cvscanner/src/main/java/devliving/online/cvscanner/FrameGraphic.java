@@ -81,11 +81,11 @@ public class FrameGraphic extends GraphicOverlay.Graphic {
         canvas.drawRoundRect(rect, 8, 8, borderPaint);
     }
 
-    public int getFrameWidth() {
-        return frameWidth;
+    public int getScaledFrameWidth() {
+        return Float.valueOf(frameWidth / mOverlay.getWidthScaleFactor()).intValue();
     }
-    public int getFrameHeight(){
-        return frameHeight;
+    public int getScaledFrameHeight(){
+        return Float.valueOf(frameHeight / mOverlay.getHeightScaleFactor()).intValue();
     }
 
     public interface FrameSizeProvider{

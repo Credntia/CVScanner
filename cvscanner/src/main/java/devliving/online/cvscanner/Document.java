@@ -106,7 +106,21 @@ public class Document {
                 try {
                     ExifInterface exif = new ExifInterface(path);
                     exif.setAttribute("UserComment", "Generated using CVScanner");
-                    exif.setAttribute(ExifInterface.TAG_ORIENTATION, String.valueOf(getImage().getMetadata().getRotation()));
+                    int orientation = ExifInterface.ORIENTATION_NORMAL;
+                    switch (getImage().getMetadata().getRotation()){
+                        case 1:
+                            orientation = ExifInterface.ORIENTATION_ROTATE_90;
+                            break;
+
+                        case 2:
+                            orientation = ExifInterface.ORIENTATION_ROTATE_180;
+                            break;
+
+                        case 3:
+                            orientation = ExifInterface.ORIENTATION_ROTATE_270;
+                            break;
+                    }
+                    exif.setAttribute(ExifInterface.TAG_ORIENTATION, String.valueOf(orientation));
                     exif.saveAttributes();
                 } catch (IOException e) {
                     e.printStackTrace();

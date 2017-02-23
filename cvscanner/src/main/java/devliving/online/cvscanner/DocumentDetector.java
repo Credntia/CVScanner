@@ -47,7 +47,7 @@ public class DocumentDetector extends Detector<Document> {
         src.release();
 
         if(!contours.isEmpty()){
-            CVProcessor.Quadrilateral quad = CVProcessor.getQuadrilateral(mContext, contours, imageSize);
+            CVProcessor.Quadrilateral quad = CVProcessor.getQuadrilateral(contours, imageSize);
 
             if(quad != null){
                 quad.points = CVProcessor.getUpscaledPoints(quad.points, CVProcessor.getScaleRatio(imageSize));

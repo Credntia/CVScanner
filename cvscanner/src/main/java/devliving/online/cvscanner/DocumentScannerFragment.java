@@ -106,7 +106,7 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
         super.onViewCreated(view, savedInstanceState);
 
         isPassport = getArguments() != null && getArguments().getBoolean(DocumentScannerActivity.IsScanningPassport, false);
-        //mGraphicOverlay.addFrame(new FrameGraphic(mGraphicOverlay, isPassport));
+        mGraphicOverlay.addFrame(new FrameGraphic(mGraphicOverlay, isPassport));
         view.setOnTouchListener(this);
 
         loadOpenCV();

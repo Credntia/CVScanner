@@ -367,7 +367,7 @@ public class StepByStepTestActivity extends AppCompatActivity{
                             if (points.length == 4) {
                                 Point[] spoints = CVProcessor.sortPoints(points);
 
-                                if (CVProcessor.insideArea(spoints, newSize)) {
+                                if (CVProcessor.isInside(spoints, newSize) && CVProcessor.isLargeEnough(spoints, newSize, 0.40)) {
                                     rectContour = contour;
                                     foundPoints = spoints;
                                     break;
@@ -966,7 +966,7 @@ public class StepByStepTestActivity extends AppCompatActivity{
                                 if (points.length == 4) {
                                     Point[] spoints = CVProcessor.sortPoints(points);
 
-                                    if (CVProcessor.insideArea(spoints, newSize)) {
+                                    if (CVProcessor.isInside(spoints, newSize) && CVProcessor.isLargeEnough(spoints, newSize, 0.40)) {
                                         rectContour = contour;
                                         foundPoints = spoints;
                                         break;

@@ -2,7 +2,6 @@ package devliving.online.cvscanner;
 
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.media.ExifInterface;
 import android.os.AsyncTask;
 import android.os.Environment;
@@ -11,16 +10,12 @@ import android.support.annotation.NonNull;
 import com.google.android.gms.vision.Frame;
 
 import org.opencv.android.Utils;
-import org.opencv.core.CvType;
 import org.opencv.core.Mat;
-import org.opencv.core.Size;
-import org.opencv.imgcodecs.Imgcodecs;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.Random;
 
 /**
  * Created by Mehedi on 10/15/16.
@@ -111,7 +106,21 @@ public class Document {
                 try {
                     ExifInterface exif = new ExifInterface(path);
                     exif.setAttribute("UserComment", "Generated using CVScanner");
-                    exif.setAttribute(ExifInterface.TAG_ORIENTATION, String.valueOf(getImage().getMetadata().getRotation()));
+                    int orientation = ExifInterface.ORIENTATION_NORMAL;
+                    switch (getImage().getMetadata().getRotation()){
+                        case 1:
+                            orientation = ExifInterface.ORIENTATION_ROTATE_90;
+                            break;
+
+                        case 2:
+                            orientation = ExifInterface.ORIENTATION_ROTATE_180;
+                            break;
+
+                        case 3:
+                            orientation = ExifInterface.ORIENTATION_ROTATE_270;
+                            break;
+                    }
+                    exif.setAttribute(ExifInterface.TAG_ORIENTATION, String.valueOf(orientation));
                     exif.saveAttributes();
                 } catch (IOException e) {
                     e.printStackTrace();

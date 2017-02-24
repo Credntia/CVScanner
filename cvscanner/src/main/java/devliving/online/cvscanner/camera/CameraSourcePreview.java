@@ -18,17 +18,16 @@ package devliving.online.cvscanner.camera;
 import android.Manifest;
 import android.content.Context;
 import android.content.res.Configuration;
+import android.graphics.Rect;
+import android.graphics.RectF;
 import android.support.annotation.RequiresPermission;
 import android.util.AttributeSet;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.ViewGroup;
 
 import com.google.android.gms.common.images.Size;
-
-import org.opencv.core.Mat;
 
 import java.io.IOException;
 
@@ -51,7 +50,7 @@ public class CameraSourcePreview extends ViewGroup {
 
         mSurfaceView = new SurfaceView(context);
         mSurfaceView.getHolder().addCallback(new SurfaceCallback());
-        //LayoutParams params = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
+
         addView(mSurfaceView);
     }
 
@@ -149,6 +148,7 @@ public class CameraSourcePreview extends ViewGroup {
 
     @Override
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+
         final int layoutWidth = right - left;
         final int layoutHeight = bottom - top;
 
@@ -178,19 +178,18 @@ public class CameraSourcePreview extends ViewGroup {
         int childWidth;
         int childHeight;
 
-        if(layoutHeight > layoutWidth){
+        if(layoutHeight < layoutWidth){
             //fit height
             childHeight = layoutHeight;
             childWidth = Math.round(childHeight*aspectRatio);
             Log.d(TAG, "fit height -> cw: " + childWidth + ", ch: " + childHeight);
 
-            if(childWidth < layoutWidth){
-                int diff = layoutWidth - childWidth;
-                childWidth = childWidth + diff;
-                childHeight = childHeight + Math.round(diff/aspectRatio);
-
+            /*
+            while (childWidth < layoutWidth){
+                childWidth++;
+                childHeight = Math.round(childWidth/aspectRatio);
                 Log.d(TAG, "fit height [nested block] -> cw: " + childWidth + ", ch: " + childHeight);
-            }
+            }*/
         }
         else{
             //fit width
@@ -198,20 +197,24 @@ public class CameraSourcePreview extends ViewGroup {
             childHeight = Math.round(childWidth/aspectRatio);
             Log.d(TAG, "fit width -> cw: " + childWidth + ", ch: " + childHeight);
 
-            if(childHeight < layoutHeight){
-                int diff = layoutHeight - childHeight;
-                childHeight = childHeight + diff;
-                childWidth = childWidth + Math.round(diff * aspectRatio);
+            /*
+            while (childHeight < layoutHeight){
+                childHeight++;
+                childWidth = Math.round(childHeight * aspectRatio);
 
                 Log.d(TAG, "fit width [nested block] -> cw: " + childWidth + ", ch: " + childHeight);
-            }
+            }*/
         }
 
-        Log.d(TAG, "layout size: w: " + layoutWidth + ", h: " + layoutHeight
-                + " - fit size: w: " + childWidth + ", h: " + childHeight);
+        Rect rect = new Rect(0, 0, childWidth, childHeight);
+        Float newLeft = (layoutWidth - childWidth)/2.0f;
+        Float newTop = (layoutHeight-childHeight)/2.0f;
+
+        rect.offsetTo(newLeft.intValue(), newTop.intValue());
+        Log.d(TAG, "new left: " + newLeft + ", top: " + newTop);
 
         for (int i = 0; i < getChildCount(); ++i) {
-            getChildAt(i).layout(0, 0, childWidth, childHeight);
+            getChildAt(i).layout(rect.left, rect.top, rect.right, rect.bottom);
         }
 
         try {

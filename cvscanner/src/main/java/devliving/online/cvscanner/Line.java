@@ -1,7 +1,5 @@
 package devliving.online.cvscanner;
 
-import android.util.Log;
-
 import org.opencv.core.Point;
 
 import java.util.ArrayDeque;
@@ -89,12 +87,12 @@ public class Line{
             double yDiff = Math.abs(Math.min(Math.min(fLine.start.y - sLine.start.y, fLine.start.y - sLine.end.y), Math.min(fLine.end.y - sLine.end.y, fLine.end.y - sLine.start.y)));
 
             if(yDiff < DIFF_THRESHOLD){
-                Log.d("SCANNER", "MERGING: yDiff: " + yDiff + ", line 1: -> start: " + fLine.start + " end: " + fLine.end
-                        + ", line 2: -> start: " + sLine.start + " end: " + sLine.end);
+                //Log.d("SCANNER", "MERGING: yDiff: " + yDiff + ", line 1: -> start: " + fLine.start + " end: " + fLine.end
+                  //      + ", line 2: -> start: " + sLine.start + " end: " + sLine.end);
                 return merge(Arrays.asList(fLine.start, fLine.end, sLine.start, sLine.end), true);
             }
-            Log.d("SCANNER", "NOT MERGING: yDiff: " + yDiff + ", line 1: -> start: " + fLine.start + " end: " + fLine.end
-                    + ", line 2: -> start: " + sLine.start + " end: " + sLine.end);
+            //Log.d("SCANNER", "NOT MERGING: yDiff: " + yDiff + ", line 1: -> start: " + fLine.start + " end: " + fLine.end
+              //      + ", line 2: -> start: " + sLine.start + " end: " + sLine.end);
         }
         else if(isNearVertical() && line.isNearVertical()){
             Line fLine = this;
@@ -106,12 +104,12 @@ public class Line{
             //double slopeDiff = Math.abs(fLine.slope - sLine.slope);
             double xDiff = Math.abs(Math.min(Math.min(fLine.start.x - sLine.start.x, fLine.start.x - sLine.end.x), Math.min(fLine.end.x - sLine.end.x, fLine.end.x - sLine.start.x)));
             if(xDiff < DIFF_THRESHOLD){
-                Log.d("SCANNER", "MERGING: xDiff: " + xDiff + ", line 1: -> start: " + fLine.start + " end: " + fLine.end
-                        + ", line 2: -> start: " + sLine.start + " end: " + sLine.end);
+                //Log.d("SCANNER", "MERGING: xDiff: " + xDiff + ", line 1: -> start: " + fLine.start + " end: " + fLine.end
+                       // + ", line 2: -> start: " + sLine.start + " end: " + sLine.end);
                 return merge(Arrays.asList(fLine.start, fLine.end, sLine.start, sLine.end), false);
             }
-            Log.d("SCANNER", "NOT MERGING: xDiff: " + xDiff + ", line 1: -> start: " + fLine.start + " end: " + fLine.end
-                    + ", line 2: -> start: " + sLine.start + " end: " + sLine.end);
+            //Log.d("SCANNER", "NOT MERGING: xDiff: " + xDiff + ", line 1: -> start: " + fLine.start + " end: " + fLine.end
+              //      + ", line 2: -> start: " + sLine.start + " end: " + sLine.end);
         }
         return null;
     }

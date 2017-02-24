@@ -297,10 +297,21 @@ public class CVProcessor {
         return contours;
     }
 
-    static public Quadrilateral getQuadForPassport(Mat img){
+    static public Quadrilateral getQuadForPassport(Mat img, double frameWidth, double frameHeight){
+        final double requiredCoverageRatio = 0.60;
         double ratio = getScaleRatio(img.size());
         double width = img.size().width / ratio;
         double height = img.size().height / ratio;
+
+        if(frameHeight == 0 || frameWidth == 0){
+            frameWidth = width;
+            frameHeight = height;
+        }
+        else{
+            frameWidth = frameWidth/ratio;
+            frameHeight = frameHeight/ratio;
+        }
+
         Size newSize = new Size(width, height);
         Mat resizedImg = new Mat(newSize, CvType.CV_8UC4);
         Imgproc.resize(img, resizedImg, newSize);
@@ -366,7 +377,7 @@ public class CVProcessor {
                     Line left = null, right = null, bottom = null, top = null;
 
                     for(Line l:nvLines){
-                        if(l.length()/height < 0.60 || (left != null && right != null)) break;
+                        if(l.length()/frameHeight < requiredCoverageRatio || (left != null && right != null)) break;
 
                         if(left == null && l.isInleft(width)){
                             left = l;
@@ -377,7 +388,7 @@ public class CVProcessor {
                     }
 
                     for(Line l:nhLines){
-                        if(l.length()/width < 0.60 || (top != null && bottom != null)) break;
+                        if(l.length()/frameWidth < requiredCoverageRatio || (top != null && bottom != null)) break;
 
                         if(bottom == null && l.isInBottom(height)){
                             bottom = l;
@@ -392,38 +403,45 @@ public class CVProcessor {
                     if((left != null && right != null) && (bottom != null || top != null)){
                         Point vLeft = bottom != null? bottom.intersect(left):top.intersect(left);
                         Point vRight = bottom != null? bottom.intersect(right):top.intersect(right);
-
+                        Log.d(TAG, "got the edges");
                         if(vLeft != null && vRight != null) {
                             double pwidth = new Line(vLeft, vRight).length();
-                            double pHeight = PASSPORT_ASPECT_RATIO * pwidth;
+                            double pHeight =  pwidth/PASSPORT_ASPECT_RATIO;
 
                             Point tLeft = getPointOnLine(vLeft, left.end, pHeight);
                             Point tRight = getPointOnLine(vRight, right.end, pHeight);
 
                             foundPoints = new Point[]{vLeft, vRight, tLeft, tRight};
-                            foundPoints = sortPoints(foundPoints);
-                            return new Quadrilateral(null, foundPoints);
                         }
                     }
                     else if((top != null && bottom != null) && (left != null || right != null)){
                         Point vTop = left != null? left.intersect(top):right.intersect(top);
                         Point vBottom = left != null? left.intersect(bottom):right.intersect(bottom);
-
+                        Log.d(TAG, "got the edges");
                         if(vTop != null && vBottom != null) {
                             double pHeight = new Line(vTop, vBottom).length();
-                            double pWidth = pHeight/PASSPORT_ASPECT_RATIO;
+                            double pWidth = pHeight * PASSPORT_ASPECT_RATIO;
 
                             Point tTop = getPointOnLine(vTop, top.end, pWidth);
                             Point tBottom = getPointOnLine(vBottom, bottom.end, pWidth);
 
                             foundPoints = new Point[]{tTop, tBottom, vTop, vBottom};
-                            foundPoints = sortPoints(foundPoints);
-                            return new Quadrilateral(null, foundPoints);
                         }
+                    }
+
+                    if(foundPoints != null){
+                        Point[] sPoints = sortPoints(foundPoints);
+
+                        if(isInside(sPoints, newSize)
+                                && isLargeEnough(sPoints, new Size(frameWidth, frameHeight), requiredCoverageRatio)){
+                            return new Quadrilateral(null, sPoints);
+                        }
+                        else Log.d(TAG, "Not inside");
                     }
                 }
             }
         }
+
         return null;
     }
 
@@ -434,7 +452,7 @@ public class CVProcessor {
         return new Point(X, Y);
     }
 
-    static public Quadrilateral getQuadrilateral(Context context, List<MatOfPoint> contours, Size srcSize){
+    static public Quadrilateral getQuadrilateral(List<MatOfPoint> contours, Size srcSize){
         double ratio = getScaleRatio(srcSize);
         int height = Double.valueOf(srcSize.height / ratio).intValue();
         int width = Double.valueOf(srcSize.width / ratio).intValue();
@@ -453,7 +471,7 @@ public class CVProcessor {
             if (points.length == 4) {
                 Point[] foundPoints = sortPoints(points);
 
-                if (insideArea(foundPoints, size)) {
+                if (isInside(foundPoints, size) && isLargeEnough(foundPoints, size, 0.25)) {
                     return new Quadrilateral( c , foundPoints );
                 }
                 else{
@@ -611,30 +629,35 @@ public class CVProcessor {
         // top-right corner = minimal diference
         result[1] = Collections.min(srcPoints, diffComparator);
 
-        // bottom-left corner = maximal diference
+        // bottom-left corner = maximal difference
         result[3] = Collections.max(srcPoints, diffComparator);
 
         return result;
     }
 
-    public static boolean insideArea(Point[] rp, Size size) {
-
+    public static boolean isInside(Point[] points, Size size){
         int width = Double.valueOf(size.width).intValue();
         int height = Double.valueOf(size.height).intValue();
-        int baseMeasure = height/4;
 
-        int bottomPos = height-baseMeasure;
-        int topPos = baseMeasure;
-        int leftPos = width/2-baseMeasure;
-        int rightPos = width/2+baseMeasure;
+        boolean isInside =  points[0].x >= 0 && points[0].y >= 0
+                && points[1].x <= width && points[1].y >= 0
+                && points[2].x <= width && points[2].y <= height
+                && points[3].x >= 0 && points[3].y <= height;
 
-        return (
-                rp[0].x <= leftPos && rp[0].y <= topPos
-                        && rp[1].x >= rightPos && rp[1].y <= topPos
-                        && rp[2].x >= rightPos && rp[2].y >= bottomPos
-                        && rp[3].x <= leftPos && rp[3].y >= bottomPos
+        Log.d(TAG, "w: " + width + ", h: " + height + "\nPoints: " + points[0] + ", " + points[1] + ", " + points[2] + ", " + points[3] + ", result: " + isInside);
+        return isInside;
+    }
 
-        );
+    public  static boolean isLargeEnough(Point[] points, Size size, double ratio){
+        double contentWidth = Math.max(new Line(points[0], points[1]).length(), new Line(points[3], points[2]).length());
+        double contentHeight = Math.max(new Line(points[0], points[3]).length(), new Line(points[1], points[2]).length());
+
+        double widthRatio = contentWidth/size.width;
+        double heightRatio = contentHeight/size.height;
+
+        Log.d(TAG, "ratio: wr-"+ widthRatio + ", hr-" + heightRatio +", w: " + size.width + ", h: " + size.height + ", cw: " + contentWidth + ", ch: " + contentHeight);
+
+        return widthRatio >= ratio && heightRatio >= ratio;
     }
 
     public static Point[] getUpscaledPoints(Point[] points, double scaleFactor){

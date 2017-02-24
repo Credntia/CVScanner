@@ -21,6 +21,7 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
@@ -43,10 +44,12 @@ import devliving.online.cvscanner.camera.GraphicOverlay;
  */
 public class DocumentScannerFragment extends Fragment implements DocumentTracker.DocumentDetectionListener, View.OnTouchListener {
     final Object mLock = new Object();
+    Context mContext;
     boolean isDocumentSaverBusy = false;
 
     private ImageButton flashToggle;
 
+    private FrameLayout mContentLayout;
     private CameraSource mCameraSource;
     private CameraSourcePreview mPreview;
     private GraphicOverlay<DocumentGraphic> mGraphicOverlay;
@@ -74,6 +77,7 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.scanner_content, container, false);
 
+        mContentLayout = (FrameLayout) view.findViewById(R.id.parent_layout);
         mPreview = (CameraSourcePreview) view.findViewById(R.id.preview);
         mGraphicOverlay = (GraphicOverlay<DocumentGraphic>) view.findViewById(R.id.graphicOverlay);
         flashToggle = (ImageButton) view.findViewById(R.id.flash);
@@ -111,7 +115,7 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
-
+        mContext = context.getApplicationContext();
         if(context instanceof DocumentScannerCallback){
             mListener = (DocumentScannerCallback) context;
         }
@@ -163,7 +167,7 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
     @SuppressLint("InlinedApi")
     private void createCameraSource() {
         if(isPassport){
-            IDDetector = new PassportDetector();
+            IDDetector = new PassportDetector(mGraphicOverlay != null? mGraphicOverlay.getFrameSizeProvider():null);
         }
         else IDDetector = new DocumentDetector(getContext());
 
@@ -243,18 +247,19 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
         synchronized (mLock) {
             if(!isDocumentSaverBusy) {
                 isDocumentSaverBusy = true;
-                document.saveDocument(getActivity(), new Document.DocumentSaveCallback() {
+                document.saveDocument(mContext, new Document.DocumentSaveCallback() {
                     @Override
                     public void onStartTask() {
-                        Toast toast = Toast.makeText(getActivity(), "Saving...", Toast.LENGTH_SHORT);
+                        Toast toast = Toast.makeText(mContext, "Saving...", Toast.LENGTH_SHORT);
                         toast.setGravity(Gravity.CENTER, 0, 0);
                         toast.show();
                     }
 
                     @Override
                     public void onSaved(String path) {
-                        if(path != null && mListener != null) {
-                            mListener.onDocumentScanned(path);
+                        if(mListener != null) {
+                            if(path != null) mListener.onDocumentScanned(path);
+                            else mListener.onScannerFailed("Failed to save document");
                         }
                         isDocumentSaverBusy = false;
                     }
@@ -270,6 +275,7 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
             getActivity().runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
+                    if(mCameraSource != null) mCameraSource.stop();
                     processDocument(document);
                 }
             });

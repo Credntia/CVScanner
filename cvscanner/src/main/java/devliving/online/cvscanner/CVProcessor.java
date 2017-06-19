@@ -773,12 +773,12 @@ public class CVProcessor {
             clipPercentage = clipPercentage / 2.0f;
 
             minGray = 0;
-            while (accumulator[(int) minGray] < clipPercentage){
+            while (minGray < histSize && accumulator[(int) minGray] < clipPercentage){
                 minGray++;
             }
 
             maxGray = histSize - 1;
-            while (accumulator[(int) maxGray] >= (max - clipPercentage)){
+            while (maxGray >= 0 && accumulator[(int) maxGray] >= (max - clipPercentage)){
                 maxGray--;
             }
         }

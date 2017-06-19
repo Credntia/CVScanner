@@ -28,13 +28,13 @@ dependencies {
     compile fileTree(include: ['*.jar'], dir: 'libs')
     testCompile 'junit:junit:4.12'
     compile 'com.android.support:appcompat-v7:25.3.1'
-    compile 'com.google.android.gms:play-services-basement:11.0.0'
-    compile 'com.google.android.gms:play-services-vision:11.0.0'
+    compile 'com.google.android.gms:play-services-basement:11.0.1'
+    compile 'com.google.android.gms:play-services-vision:11.0.1'
     compile 'org.opencv:OpenCV-Android:3.1.0'
 }
 
-def siteUrl = "https://github.com/iamMehedi/CVScanner"
-def gitUrl = "https://github.com/iamMehedi/CVScanner.git"
+def siteUrl = "https://github.com/Credntia/CVScanner"
+def gitUrl = "https://github.com/Credntia/CVScanner.git"
 
 group = "online.devliving"
 

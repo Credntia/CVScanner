@@ -635,6 +635,26 @@ public class CVProcessor {
         return result;
     }
 
+    public static boolean isInsideBaseArea(Point[] rp, Size size) {
+
+        int width = Double.valueOf(size.width).intValue();
+        int height = Double.valueOf(size.height).intValue();
+        int baseMeasure = height/4;
+
+        int bottomPos = height-baseMeasure;
+        int topPos = baseMeasure;
+        int leftPos = width/2-baseMeasure;
+        int rightPos = width/2+baseMeasure;
+
+        return (
+                rp[0].x <= leftPos && rp[0].y <= topPos
+                        && rp[1].x >= rightPos && rp[1].y <= topPos
+                        && rp[2].x >= rightPos && rp[2].y >= bottomPos
+                        && rp[3].x <= leftPos && rp[3].y >= bottomPos
+
+        );
+    }
+
     public static boolean isInside(Point[] points, Size size){
         int width = Double.valueOf(size.width).intValue();
         int height = Double.valueOf(size.height).intValue();

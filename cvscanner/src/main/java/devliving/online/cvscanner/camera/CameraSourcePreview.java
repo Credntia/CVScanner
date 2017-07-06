@@ -64,6 +64,7 @@ public class CameraSourcePreview extends ViewGroup {
 
         if (mCameraSource != null) {
             mStartRequested = true;
+            requestLayout();
             startIfReady();
         }
     }

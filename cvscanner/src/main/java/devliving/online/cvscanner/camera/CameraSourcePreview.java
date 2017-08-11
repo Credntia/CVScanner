@@ -19,7 +19,6 @@ import android.Manifest;
 import android.content.Context;
 import android.content.res.Configuration;
 import android.graphics.Rect;
-import android.graphics.RectF;
 import android.support.annotation.RequiresPermission;
 import android.util.AttributeSet;
 import android.util.Log;

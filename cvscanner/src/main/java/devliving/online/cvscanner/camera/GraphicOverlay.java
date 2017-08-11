@@ -19,10 +19,7 @@ import android.content.Context;
 import android.content.res.Configuration;
 import android.graphics.Canvas;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.View;
-
-import com.google.android.gms.vision.Frame;
 
 import java.util.HashSet;
 import java.util.List;
@@ -30,7 +27,6 @@ import java.util.Set;
 import java.util.Vector;
 
 import devliving.online.cvscanner.FrameGraphic;
-import devliving.online.cvscanner.PassportDetector;
 
 /**
  * A view which renders a series of custom graphics to be overlayed on top of an associated preview

@@ -7,7 +7,7 @@ import android.graphics.Path;
 import android.graphics.drawable.shapes.PathShape;
 import android.util.Log;
 
-import devliving.online.cvscanner.camera.GraphicOverlay;
+import online.devliving.mobilevisionpipeline.GraphicOverlay;
 
 /**
  * Created by user on 10/15/16.
@@ -51,9 +51,9 @@ public class DocumentGraphic extends GraphicOverlay.Graphic {
      * Draw the graphic on the supplied canvas.  Drawing should use the following methods to
      * convert to view coordinates for the graphics that are drawn:
      * <ol>
-     * <li>{@link Graphic#scaleX(float)} and {@link Graphic#scaleY(float)} adjust the size of
+     * <li>{@link GraphicOverlay.Graphic#scaleX(float)} and {@link GraphicOverlay.Graphic#scaleY(float)} adjust the size of
      * the supplied value from the preview scale to the view scale.</li>
-     * <li>{@link Graphic#translateX(float)} and {@link Graphic#translateY(float)} adjust the
+     * <li>{@link GraphicOverlay.Graphic#translateX(float)} and {@link GraphicOverlay.Graphic#translateY(float)} adjust the
      * coordinate from the preview's coordinate system to the view coordinate system.</li>
      * </ol>
      *
@@ -64,7 +64,7 @@ public class DocumentGraphic extends GraphicOverlay.Graphic {
         //TODO fix the coordinates see http://zhengrui.github.io/android-coordinates.html
 
         if(scannedDoc != null && scannedDoc.detectedQuad != null){
-            boolean isPortrait = mOverlay.isPortraitMode();
+            //boolean isPortrait = Util.isPortraitMode(mOverlay.getContext());
             Path path = new Path();
 
             /*

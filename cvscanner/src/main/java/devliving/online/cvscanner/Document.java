@@ -10,7 +10,10 @@ import android.support.annotation.NonNull;
 import com.google.android.gms.vision.Frame;
 
 import org.opencv.android.Utils;
+import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.Point;
+import org.opencv.core.Size;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -45,6 +48,25 @@ public class Document {
 
     public void setDetectedQuad(CVProcessor.Quadrilateral detectedQuad) {
         this.detectedQuad = detectedQuad;
+    }
+
+    public int getMaxArea(){
+        Point tl = detectedQuad.points[0];
+        Point tr = detectedQuad.points[1];
+        Point br = detectedQuad.points[2];
+        Point bl = detectedQuad.points[3];
+
+        double widthA = Math.sqrt(Math.pow(br.x - bl.x, 2) + Math.pow(br.y - bl.y, 2));
+        double widthB = Math.sqrt(Math.pow(tr.x - tl.x, 2) + Math.pow(tr.y - tl.y, 2));
+
+        double dw = Math.max(widthA, widthB);
+
+        double heightA = Math.sqrt(Math.pow(tr.x - br.x, 2) + Math.pow(tr.y - br.y, 2));
+        double heightB = Math.sqrt(Math.pow(tl.x - bl.x, 2) + Math.pow(tl.y - bl.y, 2));
+
+        double dh = Math.max(heightA, heightB);
+
+        return Double.valueOf(dw).intValue() * Double.valueOf(dh).intValue();
     }
 
     public void saveDocument(Context context, DocumentSaveCallback callback){
@@ -83,8 +105,8 @@ public class Document {
          */
         @Override
         protected String doInBackground(Void... params) {
-            //Size imageSize = new Size(getImage().getMetadata().getWidth(), getImage().getMetadata().getHeight());
-            Mat image = new Mat();
+            Size imageSize = new Size(getImage().getMetadata().getWidth(), getImage().getMetadata().getHeight());
+            Mat image = new Mat(imageSize, CvType.CV_8UC4);
             Utils.bitmapToMat(getImage().getBitmap(), image);
 
             Mat croppedImage = CVProcessor.fourPointTransform(image, detectedQuad.points);

@@ -1,17 +1,15 @@
 package devliving.online.cvscanner;
 
 import android.annotation.SuppressLint;
-import android.content.res.Configuration;
-import android.support.v4.app.Fragment;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.hardware.Camera;
 import android.media.MediaActionSound;
-import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
+import android.support.v4.app.Fragment;
 import android.support.v4.graphics.drawable.DrawableCompat;
 import android.util.Log;
 import android.util.SparseArray;
@@ -21,7 +19,6 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
@@ -35,9 +32,10 @@ import org.opencv.android.OpenCVLoader;
 
 import java.io.IOException;
 
-import devliving.online.cvscanner.camera.CameraSource;
-import devliving.online.cvscanner.camera.CameraSourcePreview;
-import devliving.online.cvscanner.camera.GraphicOverlay;
+import online.devliving.mobilevisionpipeline.GraphicOverlay;
+import online.devliving.mobilevisionpipeline.Util;
+import online.devliving.mobilevisionpipeline.camera.CameraSource;
+import online.devliving.mobilevisionpipeline.camera.CameraSourcePreview;
 
 /**
  * Created by Mehedi on 10/23/16.
@@ -49,10 +47,10 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
 
     private ImageButton flashToggle;
 
-    private FrameLayout mContentLayout;
     private CameraSource mCameraSource;
     private CameraSourcePreview mPreview;
     private GraphicOverlay<DocumentGraphic> mGraphicOverlay;
+    private Util.FrameSizeProvider mFrameSizeProvider;
 
     // helper objects for detecting taps and pinches.
     private GestureDetector gestureDetector;
@@ -77,7 +75,6 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.scanner_content, container, false);
 
-        mContentLayout = (FrameLayout) view.findViewById(R.id.parent_layout);
         mPreview = (CameraSourcePreview) view.findViewById(R.id.preview);
         mGraphicOverlay = (GraphicOverlay<DocumentGraphic>) view.findViewById(R.id.graphicOverlay);
         flashToggle = (ImageButton) view.findViewById(R.id.flash);
@@ -106,7 +103,9 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
         super.onViewCreated(view, savedInstanceState);
 
         isPassport = getArguments() != null && getArguments().getBoolean(DocumentScannerActivity.IsScanningPassport, false);
-        mGraphicOverlay.addFrame(new FrameGraphic(mGraphicOverlay, isPassport));
+        BorderFrameGraphic frameGraphic = new BorderFrameGraphic(mGraphicOverlay, isPassport);
+        mFrameSizeProvider = frameGraphic;
+        mGraphicOverlay.addFrame(frameGraphic);
         view.setOnTouchListener(this);
 
         loadOpenCV();
@@ -167,29 +166,27 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
     @SuppressLint("InlinedApi")
     private void createCameraSource() {
         if(isPassport){
-            IDDetector = new PassportDetector(mGraphicOverlay != null? mGraphicOverlay.getFrameSizeProvider():null);
+            IDDetector = new PassportDetector(mFrameSizeProvider);
         }
         else IDDetector = new DocumentDetector(getContext());
 
+        /*
         DocumentTrackerFactory factory = new DocumentTrackerFactory(mGraphicOverlay, this);
         IDDetector.setProcessor(
-                new MultiProcessor.Builder<>(factory).build());
+                new MultiProcessor.Builder<>(factory).build());*/
+        DocumentProcessor processor = new DocumentProcessor.Builder(IDDetector, new DocumentTracker(mGraphicOverlay, new DocumentGraphic(mGraphicOverlay, null), this))
+              .build();
+        IDDetector.setProcessor(processor);
 
         // Creates and starts the camera.  Note that this uses a higher resolution in comparison
         // to other detection examples to enable the barcode detector to detect small barcodes
         // at long distances.
-        CameraSource.Builder builder = new CameraSource.Builder(getActivity().getApplicationContext(), IDDetector)
+        mCameraSource  = new CameraSource.Builder(getActivity().getApplicationContext(), IDDetector)
                 .setFacing(CameraSource.CAMERA_FACING_BACK)
-                .setRequestedFps(15.0f);
-
-        // make sure that auto focus is an available option
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-            builder = builder.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
-        }
-
-        mCameraSource = builder
+                .setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO)
                 .setFlashMode(Camera.Parameters.FLASH_MODE_AUTO)
-                .build();
+                .setRequestedFps(30.0f)
+        .build();
     }
 
     /**

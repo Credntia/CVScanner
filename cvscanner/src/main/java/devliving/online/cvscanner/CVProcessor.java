@@ -42,6 +42,16 @@ public class CVProcessor {
 
     public final static float PASSPORT_ASPECT_RATIO = 3.465f/4.921f;
 
+    public static Mat buildMatFromYUV(byte[] nv21Data, int width, int height){
+        Mat yuv = new Mat(height + (height/2), width, CvType.CV_8UC1);
+        yuv.put(0, 0, nv21Data);
+
+        Mat rgba = new Mat();
+        Imgproc.cvtColor(yuv, rgba, Imgproc.COLOR_YUV2RGBA_NV21, CvType.CV_8UC4);
+
+        return rgba;
+    }
+
     public static Rect detectBorder(Mat original){
         Mat src = original.clone();
         Log.d(TAG, "1 original: " + src.toString());

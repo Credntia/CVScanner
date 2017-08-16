@@ -3,16 +3,16 @@ apply plugin: 'com.github.dcendents.android-maven'
 apply plugin: "com.jfrog.bintray"
 
 // This is the library version used when deploying the artifact
-version = "1.1.2"
+version = "1.1.4"
 
 android {
     compileSdkVersion 25
-    buildToolsVersion '25.0.2'
+    buildToolsVersion '25.0.3'
 
     defaultConfig {
         minSdkVersion 19
         targetSdkVersion 25
-        versionCode 12
+        versionCode 13
         versionName version
         renderscriptTargetApi 24
     }
@@ -27,14 +27,15 @@ android {
 dependencies {
     compile fileTree(include: ['*.jar'], dir: 'libs')
     testCompile 'junit:junit:4.12'
-    compile 'com.android.support:appcompat-v7:25.2.0'
-    compile 'com.google.android.gms:play-services-basement:10.2.0'
-    compile 'com.google.android.gms:play-services-vision:10.2.0'
+    compile 'com.android.support:appcompat-v7:25.3.1'
+    compile 'com.google.android.gms:play-services-basement:11.0.4'
+    compile 'com.google.android.gms:play-services-vision:11.0.4'
+    compile 'online.devliving:mobilevision-pipeline:1.0.5'
     compile 'org.opencv:OpenCV-Android:3.1.0'
 }
 
-def siteUrl = "https://github.com/iamMehedi/CVScanner"
-def gitUrl = "https://github.com/iamMehedi/CVScanner.git"
+def siteUrl = "https://github.com/Credntia/CVScanner"
+def gitUrl = "https://github.com/Credntia/CVScanner.git"
 
 group = "online.devliving"
 

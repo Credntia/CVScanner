@@ -3,7 +3,7 @@ package devliving.online.cvscanner;
 import com.google.android.gms.vision.Detector;
 import com.google.android.gms.vision.Tracker;
 
-import devliving.online.cvscanner.camera.GraphicOverlay;
+import online.devliving.mobilevisionpipeline.GraphicOverlay;
 
 /**
  * Created by user on 10/15/16.

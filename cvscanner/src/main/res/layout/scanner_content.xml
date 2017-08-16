@@ -4,21 +4,20 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:keepScreenOn="true"
-    android:background="@android:color/transparent"
     >
 
-    <devliving.online.cvscanner.camera.CameraSourcePreview
+    <online.devliving.mobilevisionpipeline.camera.CameraSourcePreview
         android:id="@+id/preview"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_gravity="center">
 
-        <devliving.online.cvscanner.camera.GraphicOverlay
+        <online.devliving.mobilevisionpipeline.GraphicOverlay
             android:id="@+id/graphicOverlay"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
-    </devliving.online.cvscanner.camera.CameraSourcePreview>
+    </online.devliving.mobilevisionpipeline.camera.CameraSourcePreview>
 
     <ImageButton
         android:id="@+id/flash"

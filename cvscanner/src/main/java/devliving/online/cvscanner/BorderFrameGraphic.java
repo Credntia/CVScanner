@@ -2,6 +2,7 @@ package devliving.online.cvscanner;
 
 import android.graphics.RectF;
 
+import devliving.online.cvscanner.util.CVProcessor;
 import online.devliving.mobilevisionpipeline.FrameGraphic;
 import online.devliving.mobilevisionpipeline.GraphicOverlay;
 import online.devliving.mobilevisionpipeline.Util;

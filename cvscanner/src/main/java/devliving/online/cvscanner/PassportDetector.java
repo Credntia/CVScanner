@@ -20,6 +20,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.List;
 
+import devliving.online.cvscanner.util.CVProcessor;
 import online.devliving.mobilevisionpipeline.Util;
 
 /**

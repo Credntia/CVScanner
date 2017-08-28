@@ -20,6 +20,8 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
+import devliving.online.cvscanner.util.CVProcessor;
+
 /**
  * Created by Mehedi on 10/15/16.
  *

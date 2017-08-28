@@ -32,7 +32,6 @@ import org.opencv.core.MatOfFloat4;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
-import org.opencv.core.Range;
 import org.opencv.core.Rect;
 import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
@@ -40,17 +39,15 @@ import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
 import java.io.FileNotFoundException;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Deque;
 import java.util.List;
 
-import devliving.online.cvscanner.CVProcessor;
-import devliving.online.cvscanner.Line;
+import devliving.online.cvscanner.util.CVProcessor;
+import devliving.online.cvscanner.util.Line;
 
 /**
  * Created by user on 9/22/16.

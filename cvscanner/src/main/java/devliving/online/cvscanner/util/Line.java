@@ -1,4 +1,4 @@
-package devliving.online.cvscanner;
+package devliving.online.cvscanner.util;
 
 import org.opencv.core.Point;
 

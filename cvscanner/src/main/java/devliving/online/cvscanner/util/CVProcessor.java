@@ -1,11 +1,8 @@
-package devliving.online.cvscanner;
+package devliving.online.cvscanner.util;
 
 import android.content.Context;
 import android.os.Handler;
-import android.os.HandlerThread;
-import android.support.annotation.UiThread;
 import android.util.Log;
-import android.util.TimingLogger;
 import android.widget.Toast;
 
 import org.opencv.core.Core;
@@ -742,7 +739,7 @@ public class CVProcessor {
         return doc;
     }
 
-    static Mat adjustBirghtnessAndContrast(Mat src, double clipPercentage){
+    public static Mat adjustBirghtnessAndContrast(Mat src, double clipPercentage){
         int histSize = 256;
         double alpha, beta;
         double minGray, maxGray;
@@ -807,7 +804,7 @@ public class CVProcessor {
         return result;
     }
 
-    static Mat sharpenImage(Mat src){
+    public static Mat sharpenImage(Mat src){
         Mat sharped = new Mat();
         Imgproc.GaussianBlur(src, sharped, new Size(0, 0), 3);
         Core.addWeighted(src, 1.5, sharped, -0.5, 0, sharped);

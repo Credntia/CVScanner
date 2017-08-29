@@ -1,9 +1,6 @@
 package devliving.online.cvscanner.util;
 
-import android.content.Context;
-import android.os.Handler;
 import android.util.Log;
-import android.widget.Toast;
 
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
@@ -490,17 +487,6 @@ public class CVProcessor {
 
         //showToast(context, "Make sure the ID is on a contrasting background");
         return null;
-    }
-
-    static void showToast(Context context, final String text){
-        final Context mcontext = context;
-        Handler handler = new Handler(context.getMainLooper());
-        handler.post(new Runnable() {
-            @Override
-            public void run() {
-                Toast.makeText(mcontext, text, Toast.LENGTH_SHORT).show();
-            }
-        });
     }
 
     static public Quadrilateral getQuadForPassport(List<MatOfPoint> contours, Size srcSize, int frameSize){

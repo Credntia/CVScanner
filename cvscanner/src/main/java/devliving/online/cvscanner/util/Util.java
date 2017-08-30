@@ -7,6 +7,7 @@ import android.graphics.BitmapRegionDecoder;
 import android.graphics.Rect;
 import android.net.Uri;
 import android.opengl.GLES10;
+import android.os.Environment;
 import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.media.ExifInterface;
@@ -51,15 +52,22 @@ public final class Util {
         });
     }
 
-    public static Uri saveImage(Context context, String imageName, @NonNull Mat img){
+    public static Uri saveImage(Context context, String imageName, @NonNull Mat img, boolean useExternalStorage) throws IOException {
         Uri imageUri = null;
 
-        File cacheDir = context.getCacheDir();
-        if (!cacheDir.exists()) {
-            cacheDir.mkdirs();
+        File dir = null;
+        if(useExternalStorage){
+            dir = new File(Environment.getExternalStorageDirectory(), "/CVScanner/");
+        }
+        else {
+            dir = context.getCacheDir();
         }
 
-        File imageFile = new File(cacheDir, imageName);
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+
+        File imageFile = new File(dir, imageName);
 
         Bitmap bitmap = Bitmap.createBitmap((int) img.size().width, (int) img.size().height, Bitmap.Config.ARGB_8888);
         Utils.matToBitmap(img, bitmap);
@@ -71,10 +79,6 @@ public final class Util {
             fout.flush();
 
             imageUri = Uri.fromFile(imageFile);
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
         }
         finally {
             closeSilently(fout);
@@ -217,6 +221,39 @@ public final class Util {
             exifDest.saveAttributes();
         }finally {
             closeSilently(srcStream);
+            closeSilently(destStream);
+        }
+        return true;
+    }
+
+    public static boolean setExifRotation(Context context, Uri imageUri, int rotation) throws IOException {
+        if (imageUri == null) return false;
+
+        InputStream destStream = null;
+        try{
+            destStream = context.getContentResolver().openInputStream(imageUri);
+
+            ExifInterface exif = new ExifInterface(destStream);
+
+            exif.setAttribute("UserComment", "Generated using CVScanner");
+
+            int orientation = ExifInterface.ORIENTATION_NORMAL;
+            switch (rotation){
+                case 1:
+                    orientation = ExifInterface.ORIENTATION_ROTATE_90;
+                    break;
+
+                case 2:
+                    orientation = ExifInterface.ORIENTATION_ROTATE_180;
+                    break;
+
+                case 3:
+                    orientation = ExifInterface.ORIENTATION_ROTATE_270;
+                    break;
+            }
+            exif.setAttribute(ExifInterface.TAG_ORIENTATION, String.valueOf(orientation));
+            exif.saveAttributes();
+        }finally {
             closeSilently(destStream);
         }
         return true;

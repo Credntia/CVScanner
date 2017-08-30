@@ -15,6 +15,7 @@ import android.widget.Toast;
 
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
+import org.opencv.imgcodecs.Imgcodecs;
 
 import java.io.Closeable;
 import java.io.File;
@@ -88,15 +89,8 @@ public final class Util {
     }
 
     public static int calculateBitmapSampleSize(Context context, Uri bitmapUri) throws IOException {
-        InputStream is = null;
-        BitmapFactory.Options options = new BitmapFactory.Options();
-        options.inJustDecodeBounds = true;
-        try {
-            is = context.getContentResolver().openInputStream(bitmapUri);
-            BitmapFactory.decodeStream(is, null, options); // Just get image size
-        } finally {
-            Util.closeSilently(is);
-        }
+
+        BitmapFactory.Options options = decodeImageForSize(context, bitmapUri);
 
         int maxSize = getMaxImageSize();
         int sampleSize = 1;
@@ -105,6 +99,20 @@ public final class Util {
         }
 
         return sampleSize;
+    }
+
+    static BitmapFactory.Options decodeImageForSize(Context context, Uri imageUri) throws FileNotFoundException {
+        InputStream is = null;
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inJustDecodeBounds = true;
+        try {
+            is = context.getContentResolver().openInputStream(imageUri);
+            BitmapFactory.decodeStream(is, null, options); // Just get image size
+        } finally {
+            Util.closeSilently(is);
+        }
+
+        return options;
     }
 
     public static Bitmap loadBitmapFromUri(Context context, int sampleSize, Uri uri) throws FileNotFoundException {
@@ -124,16 +132,16 @@ public final class Util {
         return out;
     }
 
-    public static int calculateInSampleSize(BitmapFactory.Options options, int reqWidth,
-                                            int reqHeight, boolean keepAspectRatio)
-    {
+    public static int calculateInSampleSize(Context context, Uri imageUri, int reqWidth,
+                                            int reqHeight, boolean keepAspectRatio) throws FileNotFoundException {
+        BitmapFactory.Options options = decodeImageForSize(context, imageUri);
         // Raw height and width of image
         final int height = options.outHeight;
         final int width = options.outWidth;
         final float aspectRatio = (float)height/width;
         int inSampleSize = 1;
 
-        if (reqHeight > 0 && reqWidth > 0) {
+        if (reqWidth > 0 && (keepAspectRatio || reqHeight > 0)) {
             if(keepAspectRatio)
             {
                 reqHeight = Math.round(reqWidth * aspectRatio);
@@ -165,17 +173,14 @@ public final class Util {
         InputStream imageStream = null;
         Bitmap image = null;
         try {
-            imageStream = context.getContentResolver().openInputStream(imageUri);
             // First decode with inJustDecodeBounds=true to check dimensions
             final BitmapFactory.Options options = new BitmapFactory.Options();
-            options.inJustDecodeBounds = true;
-            BitmapFactory.decodeStream(imageStream, null, options);
-
             // Calculate inSampleSize
-            options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight, true);
-
+            options.inSampleSize = calculateInSampleSize(context, imageUri, reqWidth, reqHeight, true);
             // Decode bitmap with inSampleSize set
             options.inJustDecodeBounds = false;
+
+            imageStream = context.getContentResolver().openInputStream(imageUri);
             image = BitmapFactory.decodeStream(imageStream, null, options);
         } catch (FileNotFoundException e) {
             e.printStackTrace();

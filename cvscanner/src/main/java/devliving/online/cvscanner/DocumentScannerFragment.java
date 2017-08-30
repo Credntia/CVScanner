@@ -9,12 +9,10 @@ import android.hardware.Camera;
 import android.media.MediaActionSound;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
 import android.support.v4.graphics.drawable.DrawableCompat;
 import android.util.Log;
 import android.util.SparseArray;
 import android.view.GestureDetector;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -24,11 +22,6 @@ import android.widget.Toast;
 
 import com.google.android.gms.vision.Detector;
 import com.google.android.gms.vision.Frame;
-import com.google.android.gms.vision.MultiProcessor;
-
-import org.opencv.android.BaseLoaderCallback;
-import org.opencv.android.LoaderCallbackInterface;
-import org.opencv.android.OpenCVLoader;
 
 import java.io.IOException;
 
@@ -40,10 +33,9 @@ import online.devliving.mobilevisionpipeline.camera.CameraSourcePreview;
 /**
  * Created by Mehedi on 10/23/16.
  */
-public class DocumentScannerFragment extends Fragment implements DocumentTracker.DocumentDetectionListener, View.OnTouchListener {
+public class DocumentScannerFragment extends BaseFragment implements View.OnTouchListener, DocumentTracker.DocumentDetectionListener {
     final Object mLock = new Object();
     Context mContext;
-    boolean isDocumentSaverBusy = false;
 
     private ImageButton flashToggle;
 
@@ -58,13 +50,12 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
     private Detector<Document> IDDetector;
     private MediaActionSound sound = new MediaActionSound();
 
-    private DocumentScannerCallback mListener;
     private boolean isPassport = false;
 
     public static DocumentScannerFragment instantiate(boolean isPassport){
         DocumentScannerFragment fragment = new DocumentScannerFragment();
         Bundle args = new Bundle();
-        args.putBoolean(DocumentScannerActivity.IsScanningPassport, isPassport);
+        args.putBoolean(DocumentScannerActivity.EXTRA_IS_PASSPORT, isPassport);
         fragment.setArguments(args);
 
         return fragment;
@@ -75,11 +66,26 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.scanner_content, container, false);
 
-        mPreview = (CameraSourcePreview) view.findViewById(R.id.preview);
-        mGraphicOverlay = (GraphicOverlay<DocumentGraphic>) view.findViewById(R.id.graphicOverlay);
-        flashToggle = (ImageButton) view.findViewById(R.id.flash);
+        initializeViews(view);
+
+        return view;
+    }
+
+    void initializeViews(View view){
+        mPreview = view.findViewById(R.id.preview);
+        mGraphicOverlay = view.findViewById(R.id.graphicOverlay);
+        flashToggle = view.findViewById(R.id.flash);
 
         gestureDetector = new GestureDetector(getActivity(), new CaptureGestureListener());
+        view.setOnTouchListener(this);
+    }
+
+    @Override
+    protected void onAfterViewCreated() {
+        isPassport = getArguments() != null && getArguments().getBoolean(DocumentScannerActivity.EXTRA_IS_PASSPORT, false);
+        BorderFrameGraphic frameGraphic = new BorderFrameGraphic(mGraphicOverlay, isPassport);
+        mFrameSizeProvider = frameGraphic;
+        mGraphicOverlay.addFrame(frameGraphic);
 
         flashToggle.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -94,30 +100,12 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
                 }
             }
         });
-
-        return view;
-    }
-
-    @Override
-    public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-
-        isPassport = getArguments() != null && getArguments().getBoolean(DocumentScannerActivity.IsScanningPassport, false);
-        BorderFrameGraphic frameGraphic = new BorderFrameGraphic(mGraphicOverlay, isPassport);
-        mFrameSizeProvider = frameGraphic;
-        mGraphicOverlay.addFrame(frameGraphic);
-        view.setOnTouchListener(this);
-
-        loadOpenCV();
     }
 
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
         mContext = context.getApplicationContext();
-        if(context instanceof DocumentScannerCallback){
-            mListener = (DocumentScannerCallback) context;
-        }
     }
 
     void updateFlashButtonColor(){
@@ -132,28 +120,16 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
         }
     }
 
-    void loadOpenCV(){
-        if(!OpenCVLoader.initDebug()){
-            //OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_1_0, getActivity().getApplicationContext(), mLoaderCallback);
-        }
-        else{
-            mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
-        }
+    @Override
+    protected void onOpenCVConnected() {
+        createCameraSource();
+        startCameraSource();
     }
 
-    private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(getActivity()) {
-        @Override
-        public void onManagerConnected(int status) {
-            if(status == LoaderCallbackInterface.SUCCESS){
-                createCameraSource();
-                startCameraSource();
-            }
-            else{
-                if(mListener != null) mListener.onScannerFailed("Could not load OpenCV");
-                else Toast.makeText(getActivity(), "Could not load OpenCV", Toast.LENGTH_SHORT).show();
-            }
-        }
-    };
+    @Override
+    protected void onOpenCVConnectionFailed() {
+        if(mCallback != null) mCallback.onImageProcessingFailed("Could not load OpenCV", null);
+    }
 
     /**
      * Creates and starts the camera.  Note that this uses a higher resolution in comparison
@@ -242,25 +218,10 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
 
     void processDocument(Document document){
         synchronized (mLock) {
-            if(!isDocumentSaverBusy) {
-                isDocumentSaverBusy = true;
-                document.saveDocument(mContext, new Document.DocumentSaveCallback() {
-                    @Override
-                    public void onStartTask() {
-                        Toast toast = Toast.makeText(mContext, "Saving...", Toast.LENGTH_SHORT);
-                        toast.setGravity(Gravity.CENTER, 0, 0);
-                        toast.show();
-                    }
-
-                    @Override
-                    public void onSaved(String path) {
-                        if(mListener != null) {
-                            if(path != null) mListener.onDocumentScanned(path);
-                            else mListener.onScannerFailed("Failed to save document");
-                        }
-                        isDocumentSaverBusy = false;
-                    }
-                });
+            if(!isBusy) {
+                isBusy = true;
+                saveCroppedImage(document.getImage().getBitmap(), document.getImage().getMetadata().getRotation(),
+                        document.detectedQuad.points);
             }
         }
     }
@@ -359,10 +320,5 @@ public class DocumentScannerFragment extends Fragment implements DocumentTracker
             takePicture();
             return true;
         }
-    }
-
-    public interface DocumentScannerCallback{
-        void onScannerFailed(String reason);
-        void onDocumentScanned(String path);
     }
 }

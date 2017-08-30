@@ -6,8 +6,10 @@ import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.AlertDialog;
@@ -23,7 +25,7 @@ import com.google.android.gms.common.GoogleApiAvailability;
 /**
  * Created by Mehedi on 10/15/16.
  */
-public class DocumentScannerActivity extends AppCompatActivity implements DocumentScannerFragment.DocumentScannerCallback{
+public class DocumentScannerActivity extends AppCompatActivity implements BaseFragment.ImageProcessorCallback{
     private static final String TAG = "ID-reader";
 
     // intent request code to handle updating play services if needed.
@@ -33,8 +35,8 @@ public class DocumentScannerActivity extends AppCompatActivity implements Docume
     private static final int RC_HANDLE_CAMERA_PERM = 2;
 
     // constants used to pass extra data in the intent
-    public static final String ImagePath = "imagePath";
-    public static final String IsScanningPassport = "isPassport";
+    public static final String EXTRA_IMAGE_URI = "image_uri";
+    public static final String EXTRA_IS_PASSPORT = "is_passport";
 
     boolean isScanningPassport;
 
@@ -94,9 +96,7 @@ public class DocumentScannerActivity extends AppCompatActivity implements Docume
     }
 
     void addScannerFragment(){
-        isScanningPassport = getIntent().getExtras() != null && getIntent().getBooleanExtra(IsScanningPassport, false);
-
-        //if(isScanningPassport) setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE);
+        isScanningPassport = getIntent().getExtras() != null && getIntent().getBooleanExtra(EXTRA_IS_PASSPORT, false);
 
         Fragment fragment = DocumentScannerFragment.instantiate(isScanningPassport);
         getSupportFragmentManager().beginTransaction()
@@ -183,22 +183,23 @@ public class DocumentScannerActivity extends AppCompatActivity implements Docume
                 .show();
     }
 
-    void setResultAndExit(String path){
+    void setResultAndExit(Uri imageUri){
         Intent data = new Intent();
-        data.putExtra(ImagePath, path);
+        data.setData(imageUri);
         setResult(RESULT_OK, data);
 
         finish();
     }
 
     @Override
-    public void onScannerFailed(String reason) {
-        Toast.makeText(this, "Scanner failed: " + reason, Toast.LENGTH_SHORT).show();
-        finish();
+    public void onImageProcessed(Uri imageUri) {
+        setResultAndExit(imageUri);
     }
 
     @Override
-    public void onDocumentScanned(String path) {
-        setResultAndExit(path);
+    public void onImageProcessingFailed(String reason, @Nullable Exception error) {
+        Toast.makeText(this, "Scanner failed: " + reason, Toast.LENGTH_SHORT).show();
+        setResult(RESULT_CANCELED);
+        finish();
     }
 }

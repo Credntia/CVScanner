@@ -22,6 +22,7 @@ import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 
@@ -82,19 +83,25 @@ public class CropImageActivity extends AppCompatActivity implements BaseFragment
         }
     }
 
+    void setResultAndExit(Uri imageUri){
+        Intent data = new Intent();
+        data.setData(imageUri);
+        setResult(RESULT_OK, data);
+
+        finish();
+    }
+
     @Override
     public void onImageProcessingFailed(String reason, @Nullable Exception error) {
+        Log.d("CROP-ACTIVITY", "image processing failed: " + reason);
         setResult(RESULT_CANCELED);
         finish();
     }
 
     @Override
     public void onImageProcessed(Uri imageUri) {
-        Intent data = getIntent();
-        data.setData(imageUri);
-
-        setResult(RESULT_OK, data);
-        finish();
+        Log.d("CROP-ACTIVITY", "image processed");
+        setResultAndExit(imageUri);
     }
 }
 

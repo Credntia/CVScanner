@@ -26,11 +26,16 @@ import android.view.MotionEvent;
  * Created by renard on 13/11/14.
  */
 public class CropImageView extends ImageViewTouchBase {
+    public interface CropImageViewHost{
+        boolean isBusy();
+    }
+
     private HighLightView mCropHighlightView = null;
     private boolean mIsMoving = false;
     private float mLastX, mLastY;
     private int mMotionEdge;
-    private HostActivity mHost;
+
+    private CropImageViewHost mHost;
 
     @Override
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
@@ -43,7 +48,7 @@ public class CropImageView extends ImageViewTouchBase {
 
     public CropImageView(Context context, AttributeSet attrs) {
         super(context, attrs);
-        if(context instanceof HostActivity) mHost = (HostActivity) context;
+        if(context instanceof CropImageViewHost) mHost = (CropImageViewHost) context;
     }
 
     @Override
@@ -76,6 +81,10 @@ public class CropImageView extends ImageViewTouchBase {
         if (mCropHighlightView != null) {
             mCropHighlightView.getMatrix().postTranslate(deltaX, deltaY);
         }
+    }
+
+    public void setHost(CropImageViewHost mHost) {
+        this.mHost = mHost;
     }
 
     private float[] mapPointToImageSpace(float x, float y) {

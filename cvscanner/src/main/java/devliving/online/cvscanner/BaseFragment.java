@@ -1,11 +1,13 @@
 package devliving.online.cvscanner;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.View;
 
 import org.opencv.android.BaseLoaderCallback;
@@ -78,6 +80,7 @@ public abstract class BaseFragment extends Fragment implements ImageSaveTask.Sav
 
     @Override
     public void onSaved(Uri savedUri) {
+        Log.d("BASE", "saved at: " + savedUri);
         if(mCallback != null) mCallback.onImageProcessed(savedUri);
         isBusy = false;
     }

@@ -69,11 +69,12 @@ public class ImageSaveTask extends AsyncTask<Void, Void, Uri> {
 
         Uri imageUri = null;
         try {
-            imageUri = Util.saveImage(mContext, "cvscanner_image_" + System.currentTimeMillis() + ".jpg", enhancedImage, false);
+            imageUri = Util.saveImage(mContext,
+                    "cvscanner_image_" + System.currentTimeMillis() + ".jpg", enhancedImage, false);
             enhancedImage.release();
             Util.setExifRotation(mContext, imageUri, rotation);
         } catch (IOException e) {
-            mCallback.onSaveFailed(e);
+            e.printStackTrace();
         }
 
         return imageUri;
@@ -81,7 +82,8 @@ public class ImageSaveTask extends AsyncTask<Void, Void, Uri> {
 
     @Override
     protected void onPostExecute(Uri uri) {
-        mCallback.onSaved(uri);
+        if(uri != null) mCallback.onSaved(uri);
+        else mCallback.onSaveFailed(new Exception("could not save image"));
     }
 
     public interface SaveCallback{

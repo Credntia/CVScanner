@@ -26,7 +26,7 @@ import devliving.online.cvscanner.util.Util;
  * Created by Mehedi Hasan Khan <mehedi.mailing@gmail.com> on 8/29/17.
  */
 
-public class ImageCropperFragment extends BaseFragment{
+public class ImageCropperFragment extends BaseFragment implements CropImageView.CropImageViewHost {
 
     final static String ARG_SRC_IMAGE_URI = "source_image";
 
@@ -64,6 +64,8 @@ public class ImageCropperFragment extends BaseFragment{
         mRotateLeft = view.findViewById(R.id.item_rotate_left);
         mRotateRight = view.findViewById(R.id.item_rotate_right);
         mSave = view.findViewById(R.id.item_save);
+
+        mImageView.setHost(this);
     }
 
     @Override
@@ -74,7 +76,8 @@ public class ImageCropperFragment extends BaseFragment{
     @Override
     protected void onOpenCVConnectionFailed() {
         Toast.makeText(getContext(), "OpenCV failed to load", Toast.LENGTH_SHORT).show();
-        getActivity().finish();
+        if(mCallback != null) mCallback.onImageProcessingFailed("OpenCV failed to load", null);
+        else getActivity().finish();
     }
 
     @Override
@@ -220,5 +223,10 @@ public class ImageCropperFragment extends BaseFragment{
     public void onSaveFailed(Exception error) {
         super.onSaveFailed(error);
         clearImages();
+    }
+
+    @Override
+    public boolean isBusy() {
+        return isBusy;
     }
 }

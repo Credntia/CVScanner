@@ -69,7 +69,7 @@ public class MainActivity extends AppCompatActivity {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
                                 Intent i = new Intent(MainActivity.this, DocumentScannerActivity.class);
-                                i.putExtra(DocumentScannerActivity.IsScanningPassport, true);
+                                i.putExtra(DocumentScannerActivity.EXTRA_IS_PASSPORT, true);
                                 startActivityForResult(i, REQ_SCAN);
                             }
                         })
@@ -77,7 +77,7 @@ public class MainActivity extends AppCompatActivity {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
                                 Intent i = new Intent(MainActivity.this, DocumentScannerActivity.class);
-                                i.putExtra(DocumentScannerActivity.IsScanningPassport, false);
+                                i.putExtra(DocumentScannerActivity.EXTRA_IS_PASSPORT, false);
                                 startActivityForResult(i, REQ_SCAN);
                             }
                         }).show();
@@ -212,12 +212,16 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
+        Log.d("MAIN", "got activity result, code: " + requestCode + ", result: " + (resultCode == RESULT_OK));
+
         if(resultCode == RESULT_OK){
             switch (requestCode){
-                case REQ_SCAN:
-                    String path = (data != null && data.getExtras() != null)? data.getStringExtra(DocumentScannerActivity.ImagePath):null;
-                    if(path != null){
-                        mAdapter.add(path);
+                //case REQ_SCAN:
+                case REQ_CROP_IMAGE:
+                    Log.d("MAIN", "got intent data");
+                    if(data != null && data.getData() != null){
+                        mAdapter.add(data.getData());
+                        Log.d("MAIN", "added " + data.getData());
                     }
                     break;
                 case REQUEST_TAKE_PHOTO:
@@ -228,13 +232,6 @@ public class MainActivity extends AppCompatActivity {
                     if(data.getData() != null){
                         currentPhotoUri = data.getData();
                         startImageCropIntent();
-                    }
-                    break;
-
-                case REQ_CROP_IMAGE:
-                    if(data.getData() != null){
-                        //TODO add image
-                        Log.d("MAIN", "cropped image: " + data.getData());
                     }
                     break;
             }

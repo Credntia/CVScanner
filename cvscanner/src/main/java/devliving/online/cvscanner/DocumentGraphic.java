@@ -17,19 +17,21 @@ public class DocumentGraphic extends GraphicOverlay.Graphic {
     Document scannedDoc;
     Paint borderPaint, bodyPaint;
 
+    int borderColor = Color.parseColor("#41fa97"), fillColor = Color.parseColor("#69fbad");
+
     public DocumentGraphic(GraphicOverlay overlay, Document doc) {
         super(overlay);
         scannedDoc = doc;
 
         borderPaint = new Paint();
-        borderPaint.setColor(Color.parseColor("#41fa97"));
+        borderPaint.setColor(borderColor);
         borderPaint.setStyle(Paint.Style.STROKE);
         borderPaint.setStrokeCap(Paint.Cap.ROUND);
         borderPaint.setStrokeJoin(Paint.Join.ROUND);
         borderPaint.setStrokeWidth(12);
 
         bodyPaint = new Paint();
-        bodyPaint.setColor(Color.parseColor("#69fbad"));
+        bodyPaint.setColor(fillColor);
         bodyPaint.setAlpha(180);
         bodyPaint.setStyle(Paint.Style.FILL);
     }
@@ -45,6 +47,16 @@ public class DocumentGraphic extends GraphicOverlay.Graphic {
     void update(Document doc){
         scannedDoc = doc;
         postInvalidate();
+    }
+
+    public void setBorderColor(int borderColor) {
+        this.borderColor = borderColor;
+        borderPaint.setColor(borderColor);
+    }
+
+    public void setFillColor(int fillColor) {
+        this.fillColor = fillColor;
+        bodyPaint.setColor(fillColor);
     }
 
     /**

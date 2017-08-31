@@ -2,6 +2,8 @@ package devliving.online.cvscanner;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.res.Resources;
+import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -10,8 +12,10 @@ import android.media.MediaActionSound;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.graphics.drawable.DrawableCompat;
+import android.util.AttributeSet;
 import android.util.Log;
 import android.util.SparseArray;
+import android.util.TypedValue;
 import android.view.GestureDetector;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -37,6 +41,9 @@ public class DocumentScannerFragment extends BaseFragment implements View.OnTouc
     final Object mLock = new Object();
     Context mContext;
 
+    private int torchTintColor = Color.GRAY, torchTintColorLight = Color.YELLOW;
+    private int documentBorderColor = -1, documentBodyColor = -1;
+
     private ImageButton flashToggle;
 
     private CameraSource mCameraSource;
@@ -59,6 +66,36 @@ public class DocumentScannerFragment extends BaseFragment implements View.OnTouc
         fragment.setArguments(args);
 
         return fragment;
+    }
+
+    @Override
+    public void onInflate(Context context, AttributeSet attrs, Bundle savedInstanceState) {
+        super.onInflate(context, attrs, savedInstanceState);
+
+        TypedArray array = context.obtainStyledAttributes(attrs, R.styleable.DocumentScannerFragment);
+
+        torchTintColor = array.getColor(R.styleable.DocumentScannerFragment_torchTint, torchTintColor);
+        torchTintColorLight = array.getColor(R.styleable.DocumentScannerFragment_torchTintLight, torchTintColorLight);
+        Log.d("SCANNER-INFLATE", "resolved torch tint colors");
+
+        Resources.Theme theme = context.getTheme();
+        TypedValue borderColor = new TypedValue();
+        if(theme.resolveAttribute(android.R.attr.colorPrimary, borderColor, true)){
+            Log.d("SCANNER-INFLATE", "resolved border color from theme");
+            documentBorderColor = borderColor.resourceId > 0? getResources().getColor(borderColor.resourceId) : borderColor.data;
+        }
+
+        documentBorderColor = array.getColor(R.styleable.DocumentScannerFragment_documentBorderColor, documentBorderColor);
+
+        TypedValue bodyColor = new TypedValue();
+        if(theme.resolveAttribute(android.R.attr.colorPrimaryDark, bodyColor, true)){
+            Log.d("SCANNER-INFLATE", "resolved body color from theme");
+            documentBodyColor = bodyColor.resourceId > 0? getResources().getColor(bodyColor.resourceId) : bodyColor.data;
+        }
+
+        documentBodyColor = array.getColor(R.styleable.DocumentScannerFragment_documentBodyColor, documentBodyColor);
+
+        array.recycle();
     }
 
     @Nullable
@@ -108,12 +145,36 @@ public class DocumentScannerFragment extends BaseFragment implements View.OnTouc
         mContext = context.getApplicationContext();
     }
 
+    public void setTorchTintColor(int torchTintColor) {
+        this.torchTintColor = torchTintColor;
+    }
+
+    public void setTorchTintColorLight(int torchTintColorLight) {
+        this.torchTintColorLight = torchTintColorLight;
+    }
+
+    /**
+     * Should be called before fragment is added to activity
+     * @param documentBorderColor
+     */
+    public void setDocumentBorderColor(int documentBorderColor) {
+        this.documentBorderColor = documentBorderColor;
+    }
+
+    /**
+     * Should be called before fragment is added to activity
+     * @param documentBodyColor
+     */
+    public void setDocumentBodyColor(int documentBodyColor) {
+        this.documentBodyColor = documentBodyColor;
+    }
+
     void updateFlashButtonColor(){
         if(mCameraSource != null){
-            int tintColor = Color.LTGRAY;
+            int tintColor = torchTintColor;
 
             if(mCameraSource.getFlashMode() == Camera.Parameters.FLASH_MODE_TORCH){
-                tintColor = Color.YELLOW;
+                tintColor = torchTintColorLight;
             }
 
             DrawableCompat.setTint(flashToggle.getDrawable(), tintColor);
@@ -150,7 +211,12 @@ public class DocumentScannerFragment extends BaseFragment implements View.OnTouc
         DocumentTrackerFactory factory = new DocumentTrackerFactory(mGraphicOverlay, this);
         IDDetector.setProcessor(
                 new MultiProcessor.Builder<>(factory).build());*/
-        DocumentProcessor processor = new DocumentProcessor.Builder(IDDetector, new DocumentTracker(mGraphicOverlay, new DocumentGraphic(mGraphicOverlay, null), this))
+        DocumentGraphic graphic = new DocumentGraphic(mGraphicOverlay, null);
+        if(documentBorderColor != -1) graphic.setBorderColor(documentBorderColor);
+        if(documentBodyColor != -1) graphic.setFillColor(documentBodyColor);
+
+        DocumentProcessor processor = new DocumentProcessor.Builder(IDDetector,
+                new DocumentTracker(mGraphicOverlay, graphic, this))
               .build();
         IDDetector.setProcessor(processor);
 
@@ -161,7 +227,7 @@ public class DocumentScannerFragment extends BaseFragment implements View.OnTouc
                 .setFacing(CameraSource.CAMERA_FACING_BACK)
                 .setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO)
                 .setFlashMode(Camera.Parameters.FLASH_MODE_AUTO)
-                .setRequestedFps(30.0f)
+                .setRequestedFps(15.0f)
         .build();
     }
 
@@ -218,11 +284,9 @@ public class DocumentScannerFragment extends BaseFragment implements View.OnTouc
 
     void processDocument(Document document){
         synchronized (mLock) {
-            if(!isBusy) {
-                isBusy = true;
-                saveCroppedImage(document.getImage().getBitmap(), document.getImage().getMetadata().getRotation(),
-                        document.detectedQuad.points);
-            }
+            saveCroppedImage(document.getImage().getBitmap(), document.getImage().getMetadata().getRotation(),
+                    document.detectedQuad.points);
+            isBusy = true;
         }
     }
 

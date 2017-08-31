@@ -35,10 +35,11 @@ public class DocumentScannerActivity extends AppCompatActivity implements BaseFr
     private static final int RC_HANDLE_CAMERA_PERM = 2;
 
     // constants used to pass extra data in the intent
-    public static final String EXTRA_IMAGE_URI = "image_uri";
+    public static final String EXTRA_DOCUMENT_BORDER_COLOR = "border_color";
+    public static final String EXTRA_DOCUMENT_BODY_COLOR = "body_color";
+    public static final String EXTRA_TORCH_TINT_COLOR = "torch_tint_color";
+    public static final String EXTRA_TORCH_TINT_COLOR_LIGHT = "torch_tint_color_light";
     public static final String EXTRA_IS_PASSPORT = "is_passport";
-
-    boolean isScanningPassport;
 
     /**
      * Initializes the UI and creates the detector pipeline.
@@ -96,9 +97,24 @@ public class DocumentScannerActivity extends AppCompatActivity implements BaseFr
     }
 
     void addScannerFragment(){
-        isScanningPassport = getIntent().getExtras() != null && getIntent().getBooleanExtra(EXTRA_IS_PASSPORT, false);
+        Bundle extras = getIntent().getExtras();
+        boolean isScanningPassport = extras != null && getIntent().getBooleanExtra(EXTRA_IS_PASSPORT, false);
 
-        Fragment fragment = DocumentScannerFragment.instantiate(isScanningPassport);
+        DocumentScannerFragment fragment = DocumentScannerFragment.instantiate(isScanningPassport);
+
+        if(extras != null){
+            int borderColor = extras.getInt(EXTRA_DOCUMENT_BORDER_COLOR, getResources().getColor(R.color.colorPrimary));
+            fragment.setDocumentBorderColor(borderColor);
+
+            int bodyColor = extras.getInt(EXTRA_DOCUMENT_BODY_COLOR, getResources().getColor(R.color.colorPrimaryDark));
+            fragment.setDocumentBorderColor(bodyColor);
+
+            int torchTintColor = extras.getInt(EXTRA_TORCH_TINT_COLOR, getResources().getColor(R.color.dark_gray));
+            int torchTintLightColor = extras.getInt(EXTRA_TORCH_TINT_COLOR_LIGHT, getResources().getColor(R.color.torch_yellow));
+            fragment.setTorchTintColor(torchTintColor);
+            fragment.setTorchTintColorLight(torchTintLightColor);
+        }
+
         getSupportFragmentManager().beginTransaction()
                 .add(R.id.container, fragment)
                 .commitAllowingStateLoss();

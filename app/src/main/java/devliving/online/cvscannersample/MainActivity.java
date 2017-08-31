@@ -216,7 +216,7 @@ public class MainActivity extends AppCompatActivity {
 
         if(resultCode == RESULT_OK){
             switch (requestCode){
-                //case REQ_SCAN:
+                case REQ_SCAN:
                 case REQ_CROP_IMAGE:
                     Log.d("MAIN", "got intent data");
                     if(data != null && data.getData() != null){

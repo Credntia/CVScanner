@@ -1,6 +1,9 @@
 package devliving.online.cvscannersample;
 
+import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.net.Uri;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
@@ -11,11 +14,13 @@ import android.widget.ListView;
 import java.util.ArrayList;
 import java.util.List;
 
+import devliving.online.cvscanner.util.Util;
+
 /**
  * Created by user on 10/16/16.
  */
 public class ImageAdapter extends RecyclerView.Adapter<ImageViewHolder>{
-    List<String> imagePaths = new ArrayList<>();
+    List<Uri> imageUris = new ArrayList<>();
 
     /**
      * Called when RecyclerView needs a new {@link RecyclerView.ViewHolder} of the given type to represent
@@ -42,7 +47,7 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageViewHolder>{
         ImageView view = new ImageView(parent.getContext());
         ViewGroup.LayoutParams params = new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         view.setLayoutParams(params);
-        view.setScaleType(ImageView.ScaleType.FIT_XY);
+        view.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
         view.setBackgroundColor(Color.TRANSPARENT);
         view.setPadding(8, 8, 8, 8);
         return new ImageViewHolder(view);
@@ -70,10 +75,12 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageViewHolder>{
      */
     @Override
     public void onBindViewHolder(ImageViewHolder holder, int position) {
-        if(position < imagePaths.size()){
-            String path = imagePaths.get(position);
+        if(position < imageUris.size()){
+            Uri imageUri = imageUris.get(position);
 
-            holder.view.setImageBitmap(Utility.getBitmapFromPath(path, holder.view.getWidth(), 0));
+            Context context = holder.view.getContext();
+            Bitmap image = Util.loadBitmapFromUri(context, imageUri, holder.view.getWidth(), holder.view.getHeight());
+            holder.view.setImageBitmap(image);
         }
     }
 
@@ -84,20 +91,20 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageViewHolder>{
      */
     @Override
     public int getItemCount() {
-        return imagePaths.size();
+        return imageUris.size();
     }
 
-    public void add(String path){
-        int pos = imagePaths.size();
-        imagePaths.add(path);
+    public void add(Uri imageUri){
+        int pos = imageUris.size();
+        imageUris.add(imageUri);
         notifyItemInserted(pos);
         Log.d("ADAPTER", "added image");
     }
 
     public void clear(){
-        if(imagePaths.size() > 0){
-            List<String> paths = new ArrayList(imagePaths);
-            imagePaths.clear();
+        if(imageUris.size() > 0){
+            List<String> paths = new ArrayList(imageUris);
+            imageUris.clear();
             notifyDataSetChanged();
 
             for(String path:paths){

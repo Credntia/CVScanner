@@ -6,8 +6,10 @@ import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.AlertDialog;
@@ -23,7 +25,7 @@ import com.google.android.gms.common.GoogleApiAvailability;
 /**
  * Created by Mehedi on 10/15/16.
  */
-public class DocumentScannerActivity extends AppCompatActivity implements DocumentScannerFragment.DocumentScannerCallback{
+public class DocumentScannerActivity extends AppCompatActivity implements BaseFragment.ImageProcessorCallback{
     private static final String TAG = "ID-reader";
 
     // intent request code to handle updating play services if needed.
@@ -33,14 +35,12 @@ public class DocumentScannerActivity extends AppCompatActivity implements Docume
     private static final int RC_HANDLE_CAMERA_PERM = 2;
 
     // constants used to pass extra data in the intent
-    public static final String ImagePath = "imagePath";
-    public static final String IsScanningPassport = "isPassport";
+    public static final String EXTRA_DOCUMENT_BORDER_COLOR = "border_color";
+    public static final String EXTRA_DOCUMENT_BODY_COLOR = "body_color";
+    public static final String EXTRA_TORCH_TINT_COLOR = "torch_tint_color";
+    public static final String EXTRA_TORCH_TINT_COLOR_LIGHT = "torch_tint_color_light";
+    public static final String EXTRA_IS_PASSPORT = "is_passport";
 
-    boolean isScanningPassport;
-
-    /**
-     * Initializes the UI and creates the detector pipeline.
-     */
     @Override
     public void onCreate(Bundle icicle) {
         super.onCreate(icicle);
@@ -94,11 +94,23 @@ public class DocumentScannerActivity extends AppCompatActivity implements Docume
     }
 
     void addScannerFragment(){
-        isScanningPassport = getIntent().getExtras() != null && getIntent().getBooleanExtra(IsScanningPassport, false);
+        Bundle extras = getIntent().getExtras();
+        boolean isScanningPassport = extras != null && getIntent().getBooleanExtra(EXTRA_IS_PASSPORT, false);
 
-        //if(isScanningPassport) setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE);
+        DocumentScannerFragment fragment = null;
 
-        Fragment fragment = DocumentScannerFragment.instantiate(isScanningPassport);
+        if(extras != null){
+            int borderColor = extras.getInt(EXTRA_DOCUMENT_BORDER_COLOR, -1);
+            int bodyColor = extras.getInt(EXTRA_DOCUMENT_BODY_COLOR, -1);
+            int torchTintColor = extras.getInt(EXTRA_TORCH_TINT_COLOR, getResources().getColor(R.color.dark_gray));
+            int torchTintLightColor = extras.getInt(EXTRA_TORCH_TINT_COLOR_LIGHT, getResources().getColor(R.color.torch_yellow));
+
+            fragment = DocumentScannerFragment.instantiate(isScanningPassport, borderColor, bodyColor, torchTintColor, torchTintLightColor);
+        }
+        else{
+            fragment = DocumentScannerFragment.instantiate(isScanningPassport);
+        }
+
         getSupportFragmentManager().beginTransaction()
                 .add(R.id.container, fragment)
                 .commitAllowingStateLoss();
@@ -183,22 +195,23 @@ public class DocumentScannerActivity extends AppCompatActivity implements Docume
                 .show();
     }
 
-    void setResultAndExit(String path){
+    void setResultAndExit(Uri imageUri){
         Intent data = new Intent();
-        data.putExtra(ImagePath, path);
+        data.setData(imageUri);
         setResult(RESULT_OK, data);
 
         finish();
     }
 
     @Override
-    public void onScannerFailed(String reason) {
-        Toast.makeText(this, "Scanner failed: " + reason, Toast.LENGTH_SHORT).show();
-        finish();
+    public void onImageProcessed(Uri imageUri) {
+        setResultAndExit(imageUri);
     }
 
     @Override
-    public void onDocumentScanned(String path) {
-        setResultAndExit(path);
+    public void onImageProcessingFailed(String reason, @Nullable Exception error) {
+        Toast.makeText(this, "Scanner failed: " + reason, Toast.LENGTH_SHORT).show();
+        setResult(RESULT_CANCELED);
+        finish();
     }
 }

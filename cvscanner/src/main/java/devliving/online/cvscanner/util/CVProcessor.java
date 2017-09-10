@@ -1,12 +1,6 @@
-package devliving.online.cvscanner;
+package devliving.online.cvscanner.util;
 
-import android.content.Context;
-import android.os.Handler;
-import android.os.HandlerThread;
-import android.support.annotation.UiThread;
 import android.util.Log;
-import android.util.TimingLogger;
-import android.widget.Toast;
 
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
@@ -495,17 +489,6 @@ public class CVProcessor {
         return null;
     }
 
-    static void showToast(Context context, final String text){
-        final Context mcontext = context;
-        Handler handler = new Handler(context.getMainLooper());
-        handler.post(new Runnable() {
-            @Override
-            public void run() {
-                Toast.makeText(mcontext, text, Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
     static public Quadrilateral getQuadForPassport(List<MatOfPoint> contours, Size srcSize, int frameSize){
         final int requiredAspectRatio = 5;
         final float requiredCoverageRatio = 0.80f;
@@ -742,7 +725,7 @@ public class CVProcessor {
         return doc;
     }
 
-    static Mat adjustBirghtnessAndContrast(Mat src, double clipPercentage){
+    public static Mat adjustBirghtnessAndContrast(Mat src, double clipPercentage){
         int histSize = 256;
         double alpha, beta;
         double minGray, maxGray;
@@ -807,7 +790,7 @@ public class CVProcessor {
         return result;
     }
 
-    static Mat sharpenImage(Mat src){
+    public static Mat sharpenImage(Mat src){
         Mat sharped = new Mat();
         Imgproc.GaussianBlur(src, sharped, new Size(0, 0), 3);
         Core.addWeighted(src, 1.5, sharped, -0.5, 0, sharped);

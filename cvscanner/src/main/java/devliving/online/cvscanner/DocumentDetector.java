@@ -13,6 +13,8 @@ import org.opencv.core.Size;
 
 import java.util.List;
 
+import devliving.online.cvscanner.util.CVProcessor;
+
 /**
  * Created by user on 10/15/16.
  */

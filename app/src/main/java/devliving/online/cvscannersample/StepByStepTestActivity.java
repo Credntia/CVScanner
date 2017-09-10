@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -32,7 +33,6 @@ import org.opencv.core.MatOfFloat4;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
-import org.opencv.core.Range;
 import org.opencv.core.Rect;
 import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
@@ -40,17 +40,17 @@ import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
 import java.io.FileNotFoundException;
-import java.util.ArrayDeque;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Deque;
 import java.util.List;
 
-import devliving.online.cvscanner.CVProcessor;
-import devliving.online.cvscanner.Line;
+import devliving.online.cvscanner.util.CVProcessor;
+import devliving.online.cvscanner.util.Line;
+import devliving.online.cvscanner.util.Util;
 
 /**
  * Created by user on 9/22/16.
@@ -198,16 +198,23 @@ public class StepByStepTestActivity extends AppCompatActivity{
     }
 
     void onNextStep(Mat img){
-        Bitmap result = Bitmap.createBitmap(img.cols(), img.rows(), Bitmap.Config.ARGB_8888);
-        Utils.matToBitmap(img, result);
-        final String path = Utility.saveBitmapJPG(result, "cvsample_" + Calendar.getInstance().getTimeInMillis() + ".jpg");
+        //Bitmap result = Bitmap.createBitmap(img.cols(), img.rows(), Bitmap.Config.ARGB_8888);
+        //Utils.matToBitmap(img, result);
+        //final String path = Utility.saveBitmapJPG(result, "cvsample_" + Calendar.getInstance().getTimeInMillis() + ".jpg");
 
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                mAdapter.add(path);
-            }
-        });
+        try {
+            final Uri uri = Util.saveImage(this, "cvsample_" + Calendar.getInstance().getTimeInMillis() + ".jpg",
+                    img, true);
+
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    mAdapter.add(uri);
+                }
+            });
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     enum CVCommand {

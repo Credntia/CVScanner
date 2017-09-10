@@ -12,7 +12,7 @@ android {
     defaultConfig {
         minSdkVersion 19
         targetSdkVersion 26
-        versionCode 13
+        versionCode 15
         versionName version
         renderscriptTargetApi 24
     }

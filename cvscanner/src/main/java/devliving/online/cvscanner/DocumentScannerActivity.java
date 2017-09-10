@@ -41,9 +41,6 @@ public class DocumentScannerActivity extends AppCompatActivity implements BaseFr
     public static final String EXTRA_TORCH_TINT_COLOR_LIGHT = "torch_tint_color_light";
     public static final String EXTRA_IS_PASSPORT = "is_passport";
 
-    /**
-     * Initializes the UI and creates the detector pipeline.
-     */
     @Override
     public void onCreate(Bundle icicle) {
         super.onCreate(icicle);
@@ -100,19 +97,18 @@ public class DocumentScannerActivity extends AppCompatActivity implements BaseFr
         Bundle extras = getIntent().getExtras();
         boolean isScanningPassport = extras != null && getIntent().getBooleanExtra(EXTRA_IS_PASSPORT, false);
 
-        DocumentScannerFragment fragment = DocumentScannerFragment.instantiate(isScanningPassport);
+        DocumentScannerFragment fragment = null;
 
         if(extras != null){
-            int borderColor = extras.getInt(EXTRA_DOCUMENT_BORDER_COLOR, getResources().getColor(R.color.colorPrimary));
-            fragment.setDocumentBorderColor(borderColor);
-
-            int bodyColor = extras.getInt(EXTRA_DOCUMENT_BODY_COLOR, getResources().getColor(R.color.colorPrimaryDark));
-            fragment.setDocumentBorderColor(bodyColor);
-
+            int borderColor = extras.getInt(EXTRA_DOCUMENT_BORDER_COLOR, -1);
+            int bodyColor = extras.getInt(EXTRA_DOCUMENT_BODY_COLOR, -1);
             int torchTintColor = extras.getInt(EXTRA_TORCH_TINT_COLOR, getResources().getColor(R.color.dark_gray));
             int torchTintLightColor = extras.getInt(EXTRA_TORCH_TINT_COLOR_LIGHT, getResources().getColor(R.color.torch_yellow));
-            fragment.setTorchTintColor(torchTintColor);
-            fragment.setTorchTintColorLight(torchTintLightColor);
+
+            fragment = DocumentScannerFragment.instantiate(isScanningPassport, borderColor, bodyColor, torchTintColor, torchTintLightColor);
+        }
+        else{
+            fragment = DocumentScannerFragment.instantiate(isScanningPassport);
         }
 
         getSupportFragmentManager().beginTransaction()

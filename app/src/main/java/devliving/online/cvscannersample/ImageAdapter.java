@@ -47,7 +47,7 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageViewHolder>{
         ImageView view = new ImageView(parent.getContext());
         ViewGroup.LayoutParams params = new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         view.setLayoutParams(params);
-        view.setScaleType(ImageView.ScaleType.FIT_XY);
+        view.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
         view.setBackgroundColor(Color.TRANSPARENT);
         view.setPadding(8, 8, 8, 8);
         return new ImageViewHolder(view);

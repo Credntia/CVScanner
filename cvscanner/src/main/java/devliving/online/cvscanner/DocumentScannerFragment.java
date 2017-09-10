@@ -10,6 +10,7 @@ import android.graphics.Color;
 import android.hardware.Camera;
 import android.media.MediaActionSound;
 import android.os.Bundle;
+import android.support.annotation.ColorRes;
 import android.support.annotation.Nullable;
 import android.support.v4.graphics.drawable.DrawableCompat;
 import android.util.AttributeSet;
@@ -38,11 +39,17 @@ import online.devliving.mobilevisionpipeline.camera.CameraSourcePreview;
  * Created by Mehedi on 10/23/16.
  */
 public class DocumentScannerFragment extends BaseFragment implements View.OnTouchListener, DocumentTracker.DocumentDetectionListener {
+    private final static String ARG_TORCH_COLOR = "torch_color";
+    private final static String ARG_TORCH_COLOR_LIGHT = "torch_color_light";
+    private final static String ARG_DOC_BORDER_COLOR = "doc_border_color";
+    private final static String ARG_DOC_BODY_COLOR = "doc_body_color";
+
     final Object mLock = new Object();
     Context mContext;
 
     private int torchTintColor = Color.GRAY, torchTintColorLight = Color.YELLOW;
-    private int documentBorderColor = -1, documentBodyColor = -1;
+    private int documentBorderColor = -1,
+            documentBodyColor = -1;
 
     private ImageButton flashToggle;
 
@@ -63,6 +70,22 @@ public class DocumentScannerFragment extends BaseFragment implements View.OnTouc
         DocumentScannerFragment fragment = new DocumentScannerFragment();
         Bundle args = new Bundle();
         args.putBoolean(DocumentScannerActivity.EXTRA_IS_PASSPORT, isPassport);
+        fragment.setArguments(args);
+
+        return fragment;
+    }
+
+    public static DocumentScannerFragment instantiate(boolean isPassport, @ColorRes int docBorderColorRes,
+                                                      @ColorRes int docBodyColorRes, @ColorRes int torchColor,
+                                                      @ColorRes int torchColorLight){
+        DocumentScannerFragment fragment = new DocumentScannerFragment();
+        Bundle args = new Bundle();
+        args.putBoolean(DocumentScannerActivity.EXTRA_IS_PASSPORT, isPassport);
+        args.putInt(ARG_DOC_BODY_COLOR, docBodyColorRes);
+        args.putInt(ARG_DOC_BORDER_COLOR, docBorderColorRes);
+        args.putInt(ARG_TORCH_COLOR, torchColor);
+        args.putInt(ARG_TORCH_COLOR_LIGHT, torchColorLight);
+
         fragment.setArguments(args);
 
         return fragment;
@@ -119,7 +142,25 @@ public class DocumentScannerFragment extends BaseFragment implements View.OnTouc
 
     @Override
     protected void onAfterViewCreated() {
-        isPassport = getArguments() != null && getArguments().getBoolean(DocumentScannerActivity.EXTRA_IS_PASSPORT, false);
+        Bundle args = getArguments();
+        isPassport = args != null && args.getBoolean(DocumentScannerActivity.EXTRA_IS_PASSPORT, false);
+
+        Resources.Theme theme = getActivity().getTheme();
+        TypedValue borderColor = new TypedValue();
+        if(theme.resolveAttribute(android.R.attr.colorPrimary, borderColor, true)){
+            documentBorderColor = borderColor.resourceId > 0? getResources().getColor(borderColor.resourceId) : borderColor.data;
+        }
+
+        TypedValue bodyColor = new TypedValue();
+        if(theme.resolveAttribute(android.R.attr.colorPrimaryDark, bodyColor, true)){
+            documentBodyColor = bodyColor.resourceId > 0? getResources().getColor(bodyColor.resourceId) : bodyColor.data;
+        }
+
+        documentBodyColor = args.getInt(ARG_DOC_BODY_COLOR, documentBodyColor);
+        documentBorderColor = args.getInt(ARG_DOC_BORDER_COLOR, documentBorderColor);
+        torchTintColor = args.getInt(ARG_TORCH_COLOR, torchTintColor);
+        torchTintColorLight = args.getInt(ARG_TORCH_COLOR_LIGHT, torchTintColorLight);
+
         BorderFrameGraphic frameGraphic = new BorderFrameGraphic(mGraphicOverlay, isPassport);
         mFrameSizeProvider = frameGraphic;
         mGraphicOverlay.addFrame(frameGraphic);
@@ -143,30 +184,6 @@ public class DocumentScannerFragment extends BaseFragment implements View.OnTouc
     public void onAttach(Context context) {
         super.onAttach(context);
         mContext = context.getApplicationContext();
-    }
-
-    public void setTorchTintColor(int torchTintColor) {
-        this.torchTintColor = torchTintColor;
-    }
-
-    public void setTorchTintColorLight(int torchTintColorLight) {
-        this.torchTintColorLight = torchTintColorLight;
-    }
-
-    /**
-     * Should be called before fragment is added to activity
-     * @param documentBorderColor
-     */
-    public void setDocumentBorderColor(int documentBorderColor) {
-        this.documentBorderColor = documentBorderColor;
-    }
-
-    /**
-     * Should be called before fragment is added to activity
-     * @param documentBodyColor
-     */
-    public void setDocumentBodyColor(int documentBodyColor) {
-        this.documentBodyColor = documentBodyColor;
     }
 
     void updateFlashButtonColor(){

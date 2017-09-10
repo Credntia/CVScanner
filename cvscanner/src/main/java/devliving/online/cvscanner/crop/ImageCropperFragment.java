@@ -3,9 +3,13 @@ package devliving.online.cvscanner.crop;
 import android.graphics.Bitmap;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
+import android.support.annotation.ColorRes;
+import android.support.annotation.DrawableRes;
 import android.support.annotation.Nullable;
+import android.support.v4.graphics.drawable.DrawableCompat;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -29,6 +33,12 @@ import devliving.online.cvscanner.util.Util;
 public class ImageCropperFragment extends BaseFragment implements CropImageView.CropImageViewHost {
 
     final static String ARG_SRC_IMAGE_URI = "source_image";
+    final static String ARG_RT_LEFT_IMAGE_RES = "rotateLeft_imageRes";
+    final static String ARG_SAVE_IMAGE_RES = "save_imageRes";
+    final static String ARG_RT_RIGHT_IMAGE_RES = "rotateRight_imageRes";
+
+    final static String ARG_SAVE_IMAGE_COLOR_RES = "save_imageColorRes";
+    final static String ARG_RT_IMAGE_COLOR_RES = "rotate_imageColorRes";
 
     protected CropImageView mImageView;
     protected ImageButton mRotateLeft;
@@ -39,11 +49,28 @@ public class ImageCropperFragment extends BaseFragment implements CropImageView.
 
     protected int mRotation = 0, mScaleFactor = 1;
     protected Bitmap mBitmap;
+    protected Uri imageUri = null;
 
     public static ImageCropperFragment instantiate(Uri imageUri){
         ImageCropperFragment fragment = new ImageCropperFragment();
         Bundle args = new Bundle();
         args.putString(ARG_SRC_IMAGE_URI, imageUri.toString());
+        fragment.setArguments(args);
+
+        return fragment;
+    }
+
+    public static ImageCropperFragment instantiate(Uri imageUri, @ColorRes int buttonTint,
+                                                   @ColorRes int buttonTintSecondary, @DrawableRes int rotateLeftRes,
+                                                   @DrawableRes int rotateRightRes, @DrawableRes int saveButtonRes){
+        ImageCropperFragment fragment = new ImageCropperFragment();
+        Bundle args = new Bundle();
+        args.putString(ARG_SRC_IMAGE_URI, imageUri.toString());
+        args.putInt(ARG_SAVE_IMAGE_COLOR_RES, buttonTint);
+        args.putInt(ARG_RT_IMAGE_COLOR_RES, buttonTintSecondary);
+        args.putInt(ARG_RT_LEFT_IMAGE_RES, rotateLeftRes);
+        args.putInt(ARG_RT_RIGHT_IMAGE_RES, rotateRightRes);
+        args.putInt(ARG_SAVE_IMAGE_RES, saveButtonRes);
         fragment.setArguments(args);
 
         return fragment;
@@ -66,6 +93,27 @@ public class ImageCropperFragment extends BaseFragment implements CropImageView.
         mSave = view.findViewById(R.id.item_save);
 
         mImageView.setHost(this);
+
+        Bundle extras = getArguments();
+
+        if(extras.containsKey(ARG_SRC_IMAGE_URI)){
+            imageUri = Uri.parse(extras.getString(ARG_SRC_IMAGE_URI));
+        }
+
+        int buttonTintColor = getResources().getColor(extras.getInt(ARG_SAVE_IMAGE_COLOR_RES, R.color.colorAccent));
+        int secondaryBtnTintColor = getResources().getColor(extras.getInt(ARG_RT_IMAGE_COLOR_RES, R.color.colorPrimary));
+        Drawable saveBtnDrawable = getResources().getDrawable(extras.getInt(ARG_SAVE_IMAGE_RES, R.drawable.ic_check_circle));
+        Drawable rotateLeftDrawable = getResources().getDrawable(extras.getInt(ARG_RT_LEFT_IMAGE_RES, R.drawable.ic_rotate_left));
+        Drawable rotateRightDrawable = getResources().getDrawable(extras.getInt(ARG_RT_RIGHT_IMAGE_RES, R.drawable.ic_rotate_right));
+        
+        DrawableCompat.setTint(rotateLeftDrawable, secondaryBtnTintColor);
+        mRotateLeft.setImageDrawable(rotateLeftDrawable);
+
+        DrawableCompat.setTint(rotateRightDrawable, secondaryBtnTintColor);
+        mRotateRight.setImageDrawable(rotateRightDrawable);
+
+        DrawableCompat.setTint(saveBtnDrawable, buttonTintColor);
+        mSave.setImageDrawable(saveBtnDrawable);
     }
 
     @Override
@@ -129,13 +177,6 @@ public class ImageCropperFragment extends BaseFragment implements CropImageView.
 
             @Override
             public void onGlobalLayout() {
-                Bundle extras = getArguments();
-                Uri imageUri = null;
-
-                if(extras.containsKey(ARG_SRC_IMAGE_URI)){
-                    imageUri = Uri.parse(extras.getString(ARG_SRC_IMAGE_URI));
-                }
-
                 if(imageUri != null){
                     try {
                         mScaleFactor = Util.calculateBitmapSampleSize(getContext(), imageUri);
@@ -196,6 +237,7 @@ public class ImageCropperFragment extends BaseFragment implements CropImageView.
 
     protected void onSaveClicked() {
         if(!isBusy) {
+            //isBusy = true;
             float[] points = mCrop.getTrapezoid();
             Point[] quadPoints = new Point[4];
 

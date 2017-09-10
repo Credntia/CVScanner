@@ -35,6 +35,13 @@ import devliving.online.cvscanner.R;
 public class CropImageActivity extends AppCompatActivity implements BaseFragment.ImageProcessorCallback{
     public static final String EXTRA_IMAGE_URI = "input_image_uri";
 
+    final static String EXTRA_ROTATE_LEFT_IMAGE_RES = "rotateLeft_imageRes";
+    final static String EXTRA_SAVE_IMAGE_RES = "save_imageRes";
+    final static String EXTRA_ROTATE_RIGHT_IMAGE_RES = "rotateRight_imageRes";
+
+    final static String EXTRA_SAVE_BTN_COLOR_RES = "save_imageColorRes";
+    final static String EXTRA_ROTATE_BTN_COLOR_RES = "rotate_imageColorRes";
+
     @Override
     public void onCreate(Bundle icicle) {
         super.onCreate(icicle);
@@ -67,8 +74,9 @@ public class CropImageActivity extends AppCompatActivity implements BaseFragment
 
     void addCropperFragment(){
         Uri imageUri = null;
-        if(getIntent().getExtras() != null){
-            imageUri = Uri.parse(getIntent().getExtras().getString(EXTRA_IMAGE_URI));
+        Bundle extras = getIntent().getExtras();
+        if(extras != null){
+            imageUri = Uri.parse(extras.getString(EXTRA_IMAGE_URI));
         }
 
         if(imageUri == null) {
@@ -76,7 +84,14 @@ public class CropImageActivity extends AppCompatActivity implements BaseFragment
             finish();
         }
         else {
-            Fragment fragment = ImageCropperFragment.instantiate(imageUri);
+            int rtlImageResId = extras.getInt(EXTRA_ROTATE_LEFT_IMAGE_RES, R.drawable.ic_rotate_left);
+            int rtrImageResId = extras.getInt(EXTRA_ROTATE_RIGHT_IMAGE_RES, R.drawable.ic_rotate_right);
+            int saveImageResId = extras.getInt(EXTRA_SAVE_IMAGE_RES, R.drawable.ic_check_circle);
+            int rtColorResId = extras.getInt(EXTRA_ROTATE_BTN_COLOR_RES, R.color.colorPrimary);
+            int saveColorResId = extras.getInt(EXTRA_SAVE_BTN_COLOR_RES, R.color.colorAccent);
+
+            Fragment fragment = ImageCropperFragment.instantiate(imageUri, saveColorResId, rtColorResId, rtlImageResId,
+                    rtrImageResId, saveImageResId);
             getSupportFragmentManager().beginTransaction()
                     .add(R.id.container, fragment)
                     .commitAllowingStateLoss();

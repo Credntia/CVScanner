@@ -16,6 +16,7 @@ android {
         versionName version
         renderscriptTargetApi 24
     }
+
     buildTypes {
         release {
             minifyEnabled false

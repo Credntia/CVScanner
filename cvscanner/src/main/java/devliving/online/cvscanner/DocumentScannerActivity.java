@@ -23,7 +23,7 @@ import com.google.android.gms.common.GoogleApiAvailability;
 /**
  * Created by Mehedi on 10/15/16.
  */
-public class DocumentScannerActivity extends AppCompatActivity implements BaseFragment.ImageProcessorCallback{
+public class DocumentScannerActivity extends AppCompatActivity implements CVScanner.ImageProcessorCallback {
     private static final String TAG = "ID-reader";
 
     // intent request code to handle updating play services if needed.

@@ -21,13 +21,8 @@ import devliving.online.cvscanner.util.ImageSaveTask;
 
 public abstract class BaseFragment extends Fragment implements ImageSaveTask.SaveCallback {
 
-    public interface ImageProcessorCallback{
-        void onImageProcessingFailed(String reason, @Nullable Exception error);
-        void onImageProcessed(String imagePath);
-    }
-
     protected boolean isBusy = false;
-    protected ImageProcessorCallback mCallback = null;
+    protected CVScanner.ImageProcessorCallback mCallback = null;
 
     protected void loadOpenCV(){
         if(!OpenCVLoader.initDebug()){
@@ -66,8 +61,8 @@ public abstract class BaseFragment extends Fragment implements ImageSaveTask.Sav
     public void onAttach(Context context) {
         super.onAttach(context);
 
-        if(context instanceof ImageProcessorCallback){
-            mCallback = (ImageProcessorCallback) context;
+        if(context instanceof CVScanner.ImageProcessorCallback){
+            mCallback = (CVScanner.ImageProcessorCallback) context;
         }
     }
 

@@ -26,14 +26,13 @@ import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 
-import devliving.online.cvscanner.BaseFragment;
 import devliving.online.cvscanner.CVScanner;
 import devliving.online.cvscanner.R;
 
 /**
  * The activity can crop specific region of interest from an image.
  */
-public class CropImageActivity extends AppCompatActivity implements BaseFragment.ImageProcessorCallback{
+public class CropImageActivity extends AppCompatActivity implements CVScanner.ImageProcessorCallback {
     public static final String EXTRA_IMAGE_URI = "input_image_uri";
 
     public final static String EXTRA_ROTATE_LEFT_IMAGE_RES = "rotateLeft_imageRes";

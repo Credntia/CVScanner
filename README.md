@@ -2,19 +2,17 @@
 An OpenCV based library for Android to scan/crop ID documents or Passports. 
 
 ## Usage
-### Auto Crop
+### Automatic Crop
 The easiest way is to launch the `DocumentScannerActivity`
 
 ```java
-Intent i = new Intent(context, DocumentScannerActivity.class);
-i.putExtra(DocumentScannerActivity.IsScanningPassport, true);
-startActivityForResult(i, REQ_SCAN);
+CVScanner.startScanner(this, isPassport, REQ_SCAN);
 ```
-You'll get the uri of the scanned image in `onActivityResult(int requestCode, int resultCode, Intent data)`
+You'll get the path of the scanned image in `onActivityResult(int requestCode, int resultCode, Intent data)`
 
 ```java
-if(data != null && data.getData() != null){
-  Uri scannedImageUri = data.getData();                      
+if(requestCode == REQ_SCAN && resultCode == RESULT_OK){
+  String path = data.getStringExtra(CVScanner.RESULT_IMAGE_PATH);
 }
 ```
 
@@ -29,21 +27,24 @@ getSupportFragmentManager().beginTransaction()
 The host Activity should implement `ImageProcessorCallback` to get scanning results.
 
 ### Manual Crop
-Start the `CropImageActivity` with an image uri to crop that manually with the help of an adjustable trapezoid.
+The easiest way is to launch the `CropImageActivity`
 
 ```java
-Intent intent = new Intent(this, CropImageActivity.class);
-
-intent.putExtra(CropImageActivity.EXTRA_IMAGE_URI, currentPhotoUri.toString());
-startActivityForResult(intent, REQ_CROP_IMAGE);
+CVScanner.startManualCropper(this, currentPhotoUri, REQ_CROP_IMAGE);
 ```
-
-You'll get back the cropped image's uri in `onActivityResult(int requestCode, int resultCode, Intent data)`
+You'll get the path to the scanned image in `onActivityResult`
 
 ```java
-if(data != null && data.getData() != null){
-  Uri croppedImageUri = data.getData();                      
+if(requestCode == REQ_CROP_IMAGE && resultCode == RESULT_OK){
+  String path = data.getStringExtra(CVScanner.RESULT_IMAGE_PATH);
 }
 ```
+You can use the `ImageCropperFragment` too
 
-You can also use the `ImageCropperFragment`.
+```java
+Fragment fragment = ImageCropperFragment.instantiate(imageUri);
+getSupportFragmentManager().beginTransaction()
+    .add(R.id.container, fragment)
+    .commit();
+```
+The host Activity should implement `ImageProcessorCallback` to get cropping results.

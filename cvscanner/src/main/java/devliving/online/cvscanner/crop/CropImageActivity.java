@@ -26,21 +26,21 @@ import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 
-import devliving.online.cvscanner.BaseFragment;
+import devliving.online.cvscanner.CVScanner;
 import devliving.online.cvscanner.R;
 
 /**
  * The activity can crop specific region of interest from an image.
  */
-public class CropImageActivity extends AppCompatActivity implements BaseFragment.ImageProcessorCallback{
+public class CropImageActivity extends AppCompatActivity implements CVScanner.ImageProcessorCallback {
     public static final String EXTRA_IMAGE_URI = "input_image_uri";
 
-    final static String EXTRA_ROTATE_LEFT_IMAGE_RES = "rotateLeft_imageRes";
-    final static String EXTRA_SAVE_IMAGE_RES = "save_imageRes";
-    final static String EXTRA_ROTATE_RIGHT_IMAGE_RES = "rotateRight_imageRes";
+    public final static String EXTRA_ROTATE_LEFT_IMAGE_RES = "rotateLeft_imageRes";
+    public final static String EXTRA_SAVE_IMAGE_RES = "save_imageRes";
+    public final static String EXTRA_ROTATE_RIGHT_IMAGE_RES = "rotateRight_imageRes";
 
-    final static String EXTRA_SAVE_BTN_COLOR_RES = "save_imageColorRes";
-    final static String EXTRA_ROTATE_BTN_COLOR_RES = "rotate_imageColorRes";
+    public final static String EXTRA_SAVE_BTN_COLOR_RES = "save_imageColorRes";
+    public final static String EXTRA_ROTATE_BTN_COLOR_RES = "rotate_imageColorRes";
 
     @Override
     public void onCreate(Bundle icicle) {
@@ -98,9 +98,9 @@ public class CropImageActivity extends AppCompatActivity implements BaseFragment
         }
     }
 
-    void setResultAndExit(Uri imageUri){
-        Intent data = new Intent();
-        data.setData(imageUri);
+    void setResultAndExit(String imagePath){
+        Intent data = getIntent();
+        data.putExtra(CVScanner.RESULT_IMAGE_PATH, imagePath);
         setResult(RESULT_OK, data);
 
         finish();
@@ -114,9 +114,9 @@ public class CropImageActivity extends AppCompatActivity implements BaseFragment
     }
 
     @Override
-    public void onImageProcessed(Uri imageUri) {
+    public void onImageProcessed(String path) {
         Log.d("CROP-ACTIVITY", "image processed");
-        setResultAndExit(imageUri);
+        setResultAndExit(path);
     }
 }
 

@@ -256,8 +256,8 @@ public class ImageCropperFragment extends BaseFragment implements CropImageView.
     }
 
     @Override
-    public void onSaved(Uri savedUri) {
-        super.onSaved(savedUri);
+    public void onSaved(String path) {
+        super.onSaved(path);
         clearImages();
     }
 

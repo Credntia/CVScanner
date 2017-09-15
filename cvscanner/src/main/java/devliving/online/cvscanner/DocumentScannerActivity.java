@@ -6,12 +6,10 @@ import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.Fragment;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -25,7 +23,7 @@ import com.google.android.gms.common.GoogleApiAvailability;
 /**
  * Created by Mehedi on 10/15/16.
  */
-public class DocumentScannerActivity extends AppCompatActivity implements BaseFragment.ImageProcessorCallback{
+public class DocumentScannerActivity extends AppCompatActivity implements CVScanner.ImageProcessorCallback {
     private static final String TAG = "ID-reader";
 
     // intent request code to handle updating play services if needed.
@@ -195,17 +193,17 @@ public class DocumentScannerActivity extends AppCompatActivity implements BaseFr
                 .show();
     }
 
-    void setResultAndExit(Uri imageUri){
-        Intent data = new Intent();
-        data.setData(imageUri);
+    void setResultAndExit(String path){
+        Intent data = getIntent();
+        data.putExtra(CVScanner.RESULT_IMAGE_PATH, path);
         setResult(RESULT_OK, data);
 
         finish();
     }
 
     @Override
-    public void onImageProcessed(Uri imageUri) {
-        setResultAndExit(imageUri);
+    public void onImageProcessed(String imagePath) {
+        setResultAndExit(imagePath);
     }
 
     @Override

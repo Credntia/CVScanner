@@ -2,7 +2,6 @@ package devliving.online.cvscanner;
 
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
@@ -22,13 +21,8 @@ import devliving.online.cvscanner.util.ImageSaveTask;
 
 public abstract class BaseFragment extends Fragment implements ImageSaveTask.SaveCallback {
 
-    public interface ImageProcessorCallback{
-        void onImageProcessingFailed(String reason, @Nullable Exception error);
-        void onImageProcessed(Uri imageUri);
-    }
-
     protected boolean isBusy = false;
-    protected ImageProcessorCallback mCallback = null;
+    protected CVScanner.ImageProcessorCallback mCallback = null;
 
     protected void loadOpenCV(){
         if(!OpenCVLoader.initDebug()){
@@ -67,8 +61,8 @@ public abstract class BaseFragment extends Fragment implements ImageSaveTask.Sav
     public void onAttach(Context context) {
         super.onAttach(context);
 
-        if(context instanceof ImageProcessorCallback){
-            mCallback = (ImageProcessorCallback) context;
+        if(context instanceof CVScanner.ImageProcessorCallback){
+            mCallback = (CVScanner.ImageProcessorCallback) context;
         }
     }
 
@@ -78,9 +72,9 @@ public abstract class BaseFragment extends Fragment implements ImageSaveTask.Sav
     }
 
     @Override
-    public void onSaved(Uri savedUri) {
-        Log.d("BASE", "saved at: " + savedUri);
-        if(mCallback != null) mCallback.onImageProcessed(savedUri);
+    public void onSaved(String path) {
+        Log.d("BASE", "saved at: " + path);
+        if(mCallback != null) mCallback.onImageProcessed(path);
         isBusy = false;
     }
 

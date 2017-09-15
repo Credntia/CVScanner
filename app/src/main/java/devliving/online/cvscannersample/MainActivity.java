@@ -7,10 +7,7 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
-import android.provider.MediaStore;
 import android.support.annotation.NonNull;
-import android.support.v4.content.FileProvider;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
@@ -25,11 +22,9 @@ import com.getbase.floatingactionbutton.FloatingActionButton;
 
 import java.io.File;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
-import devliving.online.cvscanner.DocumentScannerActivity;
-import devliving.online.cvscanner.crop.CropImageActivity;
+import devliving.online.cvscanner.CVScanner;
+import devliving.online.cvscanner.util.Util;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -68,17 +63,13 @@ public class MainActivity extends AppCompatActivity {
                         .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
-                                Intent i = new Intent(MainActivity.this, DocumentScannerActivity.class);
-                                i.putExtra(DocumentScannerActivity.EXTRA_IS_PASSPORT, true);
-                                startActivityForResult(i, REQ_SCAN);
+                                startScannerIntent(true);
                             }
                         })
                         .setNegativeButton("No", new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
-                                Intent i = new Intent(MainActivity.this, DocumentScannerActivity.class);
-                                i.putExtra(DocumentScannerActivity.EXTRA_IS_PASSPORT, false);
-                                startActivityForResult(i, REQ_SCAN);
+                                startScannerIntent(false);
                             }
                         }).show();
             }
@@ -108,29 +99,17 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    void startScannerIntent(boolean isPassport){
+        CVScanner.startScanner(this, isPassport, REQ_SCAN);
+    }
+
     void startCameraIntent(){
         if(Build.VERSION.SDK_INT < Build.VERSION_CODES.M ||
                 checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-            Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-            // Ensure that there's a camera activity to handle the intent
-            if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
-                // Create the File where the photo should go
-                Uri photoUri = null;
-                try {
-                    photoUri = createImageFile();
-                } catch (IOException ex) {
-                    // Error occurred while creating the File
-                    ex.printStackTrace();
-                }
-                // Continue only if the File was successfully created
-                if (photoUri != null) {
-                    currentPhotoUri = photoUri;
-                    takePictureIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                    takePictureIntent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-
-                    takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
-                    startActivityForResult(takePictureIntent, REQUEST_TAKE_PHOTO);
-                }
+            try {
+                currentPhotoUri = CVScanner.startCameraIntent(this, REQUEST_TAKE_PHOTO);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
         else{
@@ -145,30 +124,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void startImageCropIntent(){
-        Intent intent = new Intent(this, CropImageActivity.class);
-
-        intent.putExtra(CropImageActivity.EXTRA_IMAGE_URI, currentPhotoUri.toString());
-        startActivityForResult(intent, REQ_CROP_IMAGE);
-    }
-
-    private Uri createImageFile() throws IOException {
-        // Create an image file name
-        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        String imageFileName = "JPEG_" + timeStamp + "_";
-        File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
-        File image = File.createTempFile(
-                imageFileName,  /* prefix */
-                ".jpg",         /* suffix */
-                storageDir      /* directory */
-        );
-
-        // Save a file: path for use with ACTION_VIEW intents
-        Uri currentPhotoUri = FileProvider.getUriForFile(this,
-                getPackageName() + ".fileprovider",
-                image);
-        Log.d("MAIN", "photo-uri: " + currentPhotoUri);
-
-        return currentPhotoUri;
+        CVScanner.startManualCropper(this, currentPhotoUri, REQ_CROP_IMAGE);
     }
 
     @Override
@@ -219,9 +175,12 @@ public class MainActivity extends AppCompatActivity {
                 case REQ_SCAN:
                 case REQ_CROP_IMAGE:
                     Log.d("MAIN", "got intent data");
-                    if(data != null && data.getData() != null){
-                        mAdapter.add(data.getData());
-                        Log.d("MAIN", "added " + data.getData());
+                    if(data != null && data.getExtras() != null){
+                        String path = data.getStringExtra(CVScanner.RESULT_IMAGE_PATH);
+                        File file = new File(path);
+                        Uri imageUri = Util.getUriForFile(this, file);
+                        if(imageUri != null) mAdapter.add(imageUri);
+                        Log.d("MAIN", "added: " + imageUri);
                     }
                     break;
                 case REQUEST_TAKE_PHOTO:

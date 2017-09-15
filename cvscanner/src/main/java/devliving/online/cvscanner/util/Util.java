@@ -3,19 +3,16 @@ package devliving.online.cvscanner.util;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.BitmapRegionDecoder;
-import android.graphics.Rect;
 import android.net.Uri;
 import android.opengl.GLES10;
 import android.os.Environment;
-import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.media.ExifInterface;
-import android.widget.Toast;
+import android.support.v4.content.FileProvider;
+import android.util.Log;
 
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
-import org.opencv.imgcodecs.Imgcodecs;
 
 import java.io.Closeable;
 import java.io.File;
@@ -23,7 +20,8 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
+
+import devliving.online.cvscanner.CVScanner;
 
 /**
  * Created by Mehedi Hasan Khan <mehedi.mailing@gmail.com> on 8/20/17.
@@ -42,33 +40,71 @@ public final class Util {
         }
     }
 
-    static void showToast(Context context, final String text){
-        final Context mcontext = context;
-        Handler handler = new Handler(context.getMainLooper());
-        handler.post(new Runnable() {
-            @Override
-            public void run() {
-                Toast.makeText(mcontext, text, Toast.LENGTH_SHORT).show();
-            }
-        });
+    public static Uri createTempFile(Context context, String fileName, String fileExtension,  boolean useExternalStorage) throws IOException {
+        File storageDir;
+
+        if(useExternalStorage){
+            storageDir = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+        }
+        else{
+            storageDir = new File(context.getCacheDir(), "/CVScanner/");
+
+            if(!storageDir.exists()) storageDir.mkdirs();
+        }
+
+        File image = File.createTempFile(fileName,
+                fileExtension, storageDir);
+
+        // Save a file: path for use with ACTION_VIEW intents
+        Uri currentPhotoUri = getUriForFile(context, image);
+        Log.d("MAIN", "photo-uri: " + currentPhotoUri);
+
+        return currentPhotoUri;
     }
 
-    public static Uri saveImage(Context context, String imageName, @NonNull Mat img, boolean useExternalStorage) throws IOException {
-        Uri imageUri = null;
+    /**
+     * Shareable FileProvider uri. The image must be in either 'context.getCacheDir() + "/CVScanner/"'
+     * or 'context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)'
+     * @param context
+     * @param file
+     * @return
+     */
+    public static Uri getUriForFile(Context context, File file){
+        return FileProvider.getUriForFile(context,
+                CVScanner.FILEPROVIDER_NAME,
+                file);
+    }
+
+    public static Uri getUriFromPath(String path){
+        File file = new File(path);
+        return Uri.fromFile(file);
+    }
+
+    /**
+     *
+     * @param context
+     * @param imageName without extension
+     * @param img
+     * @param useExternalStorage
+     * @return
+     * @throws IOException
+     */
+    public static String saveImage(Context context, String imageName, @NonNull Mat img, boolean useExternalStorage) throws IOException {
+        String imagePath = null;
 
         File dir = null;
         if(useExternalStorage){
-            dir = new File(Environment.getExternalStorageDirectory(), "/CVScanner/");
+            dir = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES);
         }
         else {
-            dir = context.getCacheDir();
+            dir = new File(context.getCacheDir(), "/CVScanner/");
         }
 
         if (!dir.exists()) {
             dir.mkdirs();
         }
 
-        File imageFile = new File(dir, imageName);
+        File imageFile = File.createTempFile(imageName, ".jpg", dir);
 
         Bitmap bitmap = Bitmap.createBitmap((int) img.size().width, (int) img.size().height, Bitmap.Config.ARGB_8888);
         Utils.matToBitmap(img, bitmap);
@@ -79,13 +115,13 @@ public final class Util {
             bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fout);
             fout.flush();
 
-            imageUri = Uri.fromFile(imageFile);
+            imagePath = imageFile.getAbsolutePath();
         }
         finally {
             closeSilently(fout);
         }
 
-        return imageUri;
+        return imagePath;
     }
 
     public static int calculateBitmapSampleSize(Context context, Uri bitmapUri) throws IOException {
@@ -101,7 +137,7 @@ public final class Util {
         return sampleSize;
     }
 
-    static BitmapFactory.Options decodeImageForSize(Context context, Uri imageUri) throws FileNotFoundException {
+    private static BitmapFactory.Options decodeImageForSize(Context context, @NonNull Uri imageUri) throws FileNotFoundException {
         InputStream is = null;
         BitmapFactory.Options options = new BitmapFactory.Options();
         options.inJustDecodeBounds = true;
@@ -168,8 +204,7 @@ public final class Util {
      * @param reqHeight
      * @return
      */
-    public static Bitmap loadBitmapFromUri(Context context, Uri imageUri, int reqWidth, int reqHeight) {
-
+    public static Bitmap loadBitmapFromUri(Context context, @NonNull Uri imageUri, int reqWidth, int reqHeight) {
         InputStream imageStream = null;
         Bitmap image = null;
         try {
@@ -213,24 +248,6 @@ public final class Util {
         }
     }
 
-    public static boolean copyExifRotation(Context context, Uri sourceUri, Uri destinationUri) throws IOException {
-        if (sourceUri == null || destinationUri == null) return false;
-        InputStream srcStream = null;
-        InputStream destStream = null;
-        try{
-            srcStream = context.getContentResolver().openInputStream(sourceUri);
-            destStream = context.getContentResolver().openInputStream(destinationUri);
-            ExifInterface exifSource = new ExifInterface(srcStream);
-            ExifInterface exifDest = new ExifInterface(destStream);
-            exifDest.setAttribute(ExifInterface.TAG_ORIENTATION, exifSource.getAttribute(ExifInterface.TAG_ORIENTATION));
-            exifDest.saveAttributes();
-        }finally {
-            closeSilently(srcStream);
-            closeSilently(destStream);
-        }
-        return true;
-    }
-
     public static boolean setExifRotation(Context context, Uri imageUri, int rotation) throws IOException {
         if (imageUri == null) return false;
 
@@ -262,58 +279,6 @@ public final class Util {
             closeSilently(destStream);
         }
         return true;
-    }
-
-    public static Bitmap decodeRegionCrop(Context context, Uri sourceUri, Rect rect) {
-        Bitmap croppedImage = null;
-        InputStream is = null;
-        try {
-            is = context.getContentResolver().openInputStream(sourceUri);
-            BitmapRegionDecoder decoder = BitmapRegionDecoder.newInstance(is, false);
-
-            try {
-                croppedImage = decoder.decodeRegion(rect, new BitmapFactory.Options());
-
-            } catch (IllegalArgumentException e) {
-                // Rethrow with some extra information
-                throw new IllegalArgumentException("Rectangle " + rect + " is outside of the image", e);
-            }
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (OutOfMemoryError e) {
-            e.printStackTrace();
-        } finally {
-            closeSilently(is);
-        }
-
-        return croppedImage;
-    }
-
-    public static Uri saveBitmap(Context context, Bitmap image){
-        String filename = "cvscanner_" + System.currentTimeMillis() + "_image.jpg";
-        File outputFile = new File(context.getExternalCacheDir(), filename);
-        OutputStream outputStream = null;
-        boolean success = false;
-
-        try {
-            outputStream = new FileOutputStream(outputFile);
-            image.compress(Bitmap.CompressFormat.JPEG, 100, outputStream);
-            outputStream.flush();
-            success = true;
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            closeSilently(outputStream);
-        }
-
-        if(success){
-            return Uri.fromFile(outputFile);
-        }
-
-        return null;
     }
 
     private static int getMaxImageSize() {

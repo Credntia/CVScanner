@@ -11,6 +11,7 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.ListView;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -78,8 +79,20 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageViewHolder>{
         if(position < imageUris.size()){
             Uri imageUri = imageUris.get(position);
 
+            Log.d("ADAPTER", "position: " + position + ", uri: " + imageUri);
+
             Context context = holder.view.getContext();
-            Bitmap image = Util.loadBitmapFromUri(context, imageUri, holder.view.getWidth(), holder.view.getHeight());
+            Bitmap image = null;
+
+            try {
+                int scale = Util.calculateInSampleSize(context, imageUri, holder.view.getWidth(),
+                        holder.view.getHeight(), true);
+                image = Util.loadBitmapFromUri(context, scale, imageUri);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            Log.d("ADAPTER", "decoded image: " + (image != null));
             holder.view.setImageBitmap(image);
         }
     }

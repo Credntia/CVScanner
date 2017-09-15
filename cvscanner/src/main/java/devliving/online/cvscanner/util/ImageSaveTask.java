@@ -2,7 +2,6 @@ package devliving.online.cvscanner.util;
 
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.net.Uri;
 import android.os.AsyncTask;
 
 import org.opencv.android.Utils;
@@ -17,7 +16,7 @@ import java.io.IOException;
  * Created by Mehedi Hasan Khan <mehedi.mailing@gmail.com> on 8/30/17.
  */
 
-public class ImageSaveTask extends AsyncTask<Void, Void, Uri> {
+public class ImageSaveTask extends AsyncTask<Void, Void, String> {
     Bitmap image;
     int rotation;
     Point[] points;
@@ -52,7 +51,7 @@ public class ImageSaveTask extends AsyncTask<Void, Void, Uri> {
      * @see #publishProgress
      */
     @Override
-    protected Uri doInBackground(Void... params) {
+    protected String doInBackground(Void... params) {
         Size imageSize = new Size(image.getWidth(), image.getHeight());
         Mat imageMat = new Mat(imageSize, CvType.CV_8UC4);
         Utils.bitmapToMat(image, imageMat);
@@ -67,28 +66,28 @@ public class ImageSaveTask extends AsyncTask<Void, Void, Uri> {
 
         enhancedImage = CVProcessor.sharpenImage(enhancedImage);
 
-        Uri imageUri = null;
+        String imagePath = null;
         try {
-            imageUri = Util.saveImage(mContext,
-                    "cvscanner_image_" + System.currentTimeMillis() + ".jpg", enhancedImage, false);
+            imagePath = Util.saveImage(mContext,
+                    "IMG_CVScanner_" + System.currentTimeMillis(), enhancedImage, false);
             enhancedImage.release();
-            Util.setExifRotation(mContext, imageUri, rotation);
+            Util.setExifRotation(mContext, Util.getUriFromPath(imagePath), rotation);
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        return imageUri;
+        return imagePath;
     }
 
     @Override
-    protected void onPostExecute(Uri uri) {
-        if(uri != null) mCallback.onSaved(uri);
+    protected void onPostExecute(String path) {
+        if(path!= null) mCallback.onSaved(path);
         else mCallback.onSaveFailed(new Exception("could not save image"));
     }
 
     public interface SaveCallback{
         void onSaveTaskStarted();
-        void onSaved(Uri savedUri);
+        void onSaved(String savedPath);
         void onSaveFailed(Exception error);
     }
 }

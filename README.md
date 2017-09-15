@@ -1,5 +1,5 @@
 # CVScanner
-An OpenCV based library for Android to scan ID documents or Passports. 
+An OpenCV based library for Android to scan/crop ID documents or Passports. 
 
 ## Usage
 ### Automatic Crop
@@ -8,13 +8,14 @@ The easiest way is to launch the `DocumentScannerActivity`
 ```java
 CVScanner.startScanner(this, isPassport, REQ_SCAN);
 ```
-You'll get the path to the scanned image in `onActivityResult`
+You'll get the path of the scanned image in `onActivityResult(int requestCode, int resultCode, Intent data)`
 
 ```java
 if(requestCode == REQ_SCAN && resultCode == RESULT_OK){
   String path = data.getStringExtra(CVScanner.RESULT_IMAGE_PATH);
 }
 ```
+
 You can use the `DocumentScannerFragment` too
 
 ```java

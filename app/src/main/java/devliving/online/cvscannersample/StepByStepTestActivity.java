@@ -203,8 +203,9 @@ public class StepByStepTestActivity extends AppCompatActivity{
         //final String path = Utility.saveBitmapJPG(result, "cvsample_" + Calendar.getInstance().getTimeInMillis() + ".jpg");
 
         try {
-            final Uri uri = Util.saveImage(this, "cvsample_" + Calendar.getInstance().getTimeInMillis() + ".jpg",
+            String imagePath = Util.saveImage(this, "cvsample_" + Calendar.getInstance().getTimeInMillis() + ".jpg",
                     img, true);
+            final Uri uri = Util.getUriFromPath(imagePath);
 
             runOnUiThread(new Runnable() {
                 @Override

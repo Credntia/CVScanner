@@ -2,7 +2,6 @@ package devliving.online.cvscanner;
 
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
@@ -24,7 +23,7 @@ public abstract class BaseFragment extends Fragment implements ImageSaveTask.Sav
 
     public interface ImageProcessorCallback{
         void onImageProcessingFailed(String reason, @Nullable Exception error);
-        void onImageProcessed(Uri imageUri);
+        void onImageProcessed(String imagePath);
     }
 
     protected boolean isBusy = false;
@@ -78,9 +77,9 @@ public abstract class BaseFragment extends Fragment implements ImageSaveTask.Sav
     }
 
     @Override
-    public void onSaved(Uri savedUri) {
-        Log.d("BASE", "saved at: " + savedUri);
-        if(mCallback != null) mCallback.onImageProcessed(savedUri);
+    public void onSaved(String path) {
+        Log.d("BASE", "saved at: " + path);
+        if(mCallback != null) mCallback.onImageProcessed(path);
         isBusy = false;
     }
 

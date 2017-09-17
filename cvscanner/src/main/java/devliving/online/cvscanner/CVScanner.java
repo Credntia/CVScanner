@@ -1,6 +1,7 @@
 package devliving.online.cvscanner;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.provider.MediaStore;
@@ -24,7 +25,10 @@ public final class CVScanner {
     }
 
     public static String RESULT_IMAGE_PATH = "result_image_path";
-    public static String FILEPROVIDER_NAME = "devliving.online.cvscanner.fileprovider";
+
+    public static String getFileproviderName(Context context){
+        return context.getPackageName() + ".cvscanner.fileprovider";
+    }
 
     public static @Nullable Uri startCameraIntent(Activity context, int reqCode) throws IOException {
         Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);

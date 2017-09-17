@@ -71,7 +71,7 @@ public final class Util {
      */
     public static Uri getUriForFile(Context context, File file){
         return FileProvider.getUriForFile(context,
-                CVScanner.FILEPROVIDER_NAME,
+                CVScanner.getFileproviderName(context),
                 file);
     }
 

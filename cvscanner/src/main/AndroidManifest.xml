@@ -24,7 +24,7 @@
 
         <provider
             android:name="android.support.v4.content.FileProvider"
-            android:authorities="devliving.online.cvscanner.fileprovider"
+            android:authorities="${applicationId}.cvscanner.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data

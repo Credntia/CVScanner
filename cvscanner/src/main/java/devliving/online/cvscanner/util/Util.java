@@ -8,7 +8,6 @@ import android.opengl.GLES10;
 import android.os.Environment;
 import android.support.annotation.NonNull;
 import android.support.media.ExifInterface;
-import android.support.v4.content.FileProvider;
 import android.util.Log;
 
 import org.opencv.android.Utils;
@@ -70,7 +69,7 @@ public final class Util {
      * @return
      */
     public static Uri getUriForFile(Context context, File file){
-        return FileProvider.getUriForFile(context,
+        return CVFileProvider.getUriForFile(context,
                 CVScanner.getFileproviderName(context),
                 file);
     }

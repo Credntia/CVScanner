@@ -11,7 +11,7 @@ import com.google.android.gms.vision.Tracker;
  */
 
 public class DocumentProcessor extends FocusingProcessor<Document> {
-    private DocumentProcessor(Detector<Document> detector, Tracker<Document> tracker) {
+    public DocumentProcessor(Detector<Document> detector, Tracker<Document> tracker) {
         super(detector, tracker);
     }
 
@@ -34,23 +34,6 @@ public class DocumentProcessor extends FocusingProcessor<Document> {
             }
 
             return itemKey;
-        }
-    }
-
-    public static class Builder {
-        private DocumentProcessor processor;
-
-        public Builder(Detector<Document> detector, Tracker<Document> tracker) {
-            this.processor = new DocumentProcessor(detector, tracker);
-        }
-
-        public Builder setMaxGapFrames(int maxGap) {
-            this.processor.zzbK(maxGap);
-            return this;
-        }
-
-        public DocumentProcessor build() {
-            return this.processor;
         }
     }
 }

@@ -32,7 +32,7 @@ import devliving.online.cvscanner.util.Util;
  */
 
 public class ImageCropperFragment extends BaseFragment implements CropImageView.CropImageViewHost {
-    public interface ImageLoadingCallback{
+    public interface ImageLoadingCallback {
         void onImageLoaded();
         void onFailedToLoadImage(Exception error);
     }

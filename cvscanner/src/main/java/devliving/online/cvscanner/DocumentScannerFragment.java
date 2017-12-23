@@ -232,9 +232,8 @@ public class DocumentScannerFragment extends BaseFragment implements View.OnTouc
         if(documentBorderColor != -1) graphic.setBorderColor(documentBorderColor);
         if(documentBodyColor != -1) graphic.setFillColor(documentBodyColor);
 
-        DocumentProcessor processor = new DocumentProcessor.Builder(IDDetector,
-                new DocumentTracker(mGraphicOverlay, graphic, this))
-              .build();
+        DocumentProcessor processor = new DocumentProcessor(IDDetector,
+                new DocumentTracker(mGraphicOverlay, graphic, this));
         IDDetector.setProcessor(processor);
 
         // Creates and starts the camera.  Note that this uses a higher resolution in comparison
